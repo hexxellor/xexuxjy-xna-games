@@ -30,20 +30,27 @@ using System.Collections.Generic;
 				{
 					if (lineTokens[0] == "SCHOOL")
 					{
-						side = new EncounterSide();
-						Sides.Add(side);
-						side.School = new GladiatorSchool();
-						side.School.Load(lineTokens[1]);
+                        //side.School = new GladiatorSchool();
+                        //side.School.Load(lineTokens[1]);
 					}
 					else if (lineTokens[0] == "TEAM")
 					{
-						side.TeamName = lineTokens[1];
+                        side = new EncounterSide();
+                        Sides.Add(side);
+                        side.TeamName = lineTokens[1];
 						//heroName = lineTokens[1];
 					}
 					else if (lineTokens[0] == "GLADIATOR")
 					{
 						side.ChosenGladiators.Add(lineTokens[1]);
 					}
+                    else if (lineTokens[0] == "UNITDB")
+                    {
+                        string shrunkLine = line.Replace("UNITDB: \t", "");
+                        string[] subtokens = shrunkLine.Split(',');
+                        CharacterData characterData = ActorGenerator.GenerateRandomCharacterUNITDB(subtokens);
+                        side.CharacterDataList.Add(characterData);
+                    }
             	}
         	}
 		}
@@ -79,5 +86,7 @@ using System.Collections.Generic;
             get;
             set;
         }
+
+        public List<CharacterData> CharacterDataList = new List<CharacterData>();
 
     }

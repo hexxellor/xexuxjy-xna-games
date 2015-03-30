@@ -7,6 +7,27 @@ using UnityEngine;
 
     public class CharacterData
     {
+        public String ValFromName(string name)
+        {
+            switch(name)
+            {
+                case "LEVEL": return ""+Level;
+                case "XP" : return ""+XP;
+                case "Next" : return ""+NEXTXP;
+                case "HP" : return ""+HP;
+                case "DAM" : return ""+DAM;
+                case "PWR" : return ""+PWR;
+                case "ACC" : return ""+DEF;
+                case "INI" : return ""+INI;
+                case "CON" : return ""+CON;
+                case "MOV" : return ""+MOV;
+                case "Arm" : return "Armour";
+                case "Wpn" : return "Weapon";
+                default:
+                    return "";
+            }
+        }
+
         public void InitValues()
         {
             ACC = 10;
@@ -24,8 +45,11 @@ using UnityEngine;
 
         public String ThumbNailName
         {
-            get;
-            set;
+            get
+            {
+                return ActorClassData.MeshName + ".tga";
+
+            }
         }
 
 

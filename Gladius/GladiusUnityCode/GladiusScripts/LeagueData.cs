@@ -235,7 +235,15 @@ public class ArenaData
             {
                 encounter.EncounterDescId = int.Parse(tokens[1]);
             }
-
+            else if (tokens[0] == ("ENCFILE"))
+            {
+                encounter.EncounterFile = tokens[1];
+                if (encounter.EncounterFile.EndsWith(".enc"))
+                {
+                    encounter.EncounterFile = encounter.EncounterFile.Replace(".enc", "");
+                    encounter.EncounterFile = encounter.EncounterFile.Replace("\\", "/");
+                }
+            }
         }
     }
 
@@ -335,6 +343,12 @@ public class ArenaEncounter
     FREQUENCY	100
 */
 
+    public Encounter Encounter
+    {
+        get;
+        set;
+    }
+
     public string Name
     { get; set; }
     public int Id
@@ -345,6 +359,7 @@ public class ArenaEncounter
 
     public string EncounterFile
     { get; set; }
+
     public int EncounterPoints
     { get; set; }
     public int EntryFee
@@ -386,6 +401,14 @@ public class ArenaEncounter
     {
         get;
         set;
+    }
+
+    public void LoadEncounterData()
+    {
+        if (Encounter == null)
+        {
+            Encounter = Encounter.Load(EncounterFile);
+        }
     }
 
     }

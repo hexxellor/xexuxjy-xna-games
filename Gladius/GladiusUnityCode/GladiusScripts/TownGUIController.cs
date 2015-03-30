@@ -18,12 +18,15 @@ public class TownGUIController : MonoBehaviour
     ShopItemMenuPanel m_shopItemPanel;
     CharacterPanel m_characterPanel;
     EncounterPanel m_encounterPanel;
+    TeamSelectionPanel m_teamSelectionPanel;
 
     GladiatorSchool m_school;
     CharacterData m_currentCharacterData;
     LeagueData m_selectedLeagueData;
-    Encounter m_selectedEncounter;
+    ArenaEncounter m_selectedEncounter;
+
     
+
     // Use this for initialization
     void Start()
     {
@@ -64,7 +67,6 @@ public class TownGUIController : MonoBehaviour
         m_arenaMenuPanel = new ArenaMenuPanel(m_townPanel, this);
         m_shopPanel = new ShopMenuPanel(m_townPanel, this);
         m_characterPanel = new CharacterPanel(m_townPanel, this);
-
     }
 
 
@@ -514,8 +516,11 @@ public class TownGUIController : MonoBehaviour
             {
                 m_townGuiController.SwitchPanel(m_townGuiController.m_encounterPanel);
             }
-            m_panel.Find("LeagueDataPanel").Find<dfTextureSprite>("LeagueImage").Texture = Resources.Load<Texture2D>(GladiusGlobals.UIRoot + "TownOverland/LeagueImages/" + leagueData.ImageName);
-            m_panel.Find("LeagueDataPanel").Find<dfRichTextLabel>("LeagueName").Text = GladiusGlobals.GameStateManager.LocalisationData[leagueData.DescriptionId];
+            else
+            {
+                m_panel.Find("LeagueDataPanel").Find<dfTextureSprite>("LeagueImage").Texture = Resources.Load<Texture2D>(GladiusGlobals.UIRoot + "TownOverland/LeagueImages/" + leagueData.ImageName);
+                m_panel.Find("LeagueDataPanel").Find<dfRichTextLabel>("LeagueName").Text = GladiusGlobals.GameStateManager.LocalisationData[leagueData.DescriptionId];
+            }
             m_townGuiController.m_selectedLeagueData = leagueData;
         }
 
@@ -534,49 +539,50 @@ public class TownGUIController : MonoBehaviour
 
     public class CharacterPanel : BaseGUIPanel
     {
+        String[] names = new String[] { "LVL", "XP", "Next", "HP", "DAM", "PWR", "ACC", "DEF", "INI", "CON", "MOV", "Arm", "Wpn" };
+
         public CharacterPanel(BaseGUIPanel parentPanel, TownGUIController townGuiController)
             : base("CharacterPanel",parentPanel, townGuiController)
         {
-            m_panel.FindPath<dfLabel>("StatsPanel/LevelPanel/Label").Text = "LVL";
-            m_panel.FindPath<dfLabel>("StatsPanel/XPPanel/Label").Text = "XP";
-            m_panel.FindPath<dfLabel>("StatsPanel/NextXPPanel/Label").Text = "NEXT";
-            m_panel.FindPath<dfLabel>("StatsPanel/HPPanel/Label").Text = "HP";
-            m_panel.FindPath<dfLabel>("StatsPanel/DAMPanel/Label").Text = "DAM";
-            m_panel.FindPath<dfLabel>("StatsPanel/PWRPanel/Label").Text = "PWR";
-            m_panel.FindPath<dfLabel>("StatsPanel/ACCPanel/Label").Text = "ACC";
-            m_panel.FindPath<dfLabel>("StatsPanel/DEFPanel/Label").Text = "DEF";
-            m_panel.FindPath<dfLabel>("StatsPanel/INIPanel/Label").Text = "INI";
-            m_panel.FindPath<dfLabel>("StatsPanel/CONPanel/Label").Text = "CON";
-            m_panel.FindPath<dfLabel>("StatsPanel/MOVPanel/Label").Text = "MOV";
-            m_panel.FindPath<dfLabel>("StatsPanel/ArmourPanel/Label").Text = "Arm";
-            m_panel.FindPath<dfLabel>("StatsPanel/WeaponPanel/Label").Text = "Wpn";
+            dfPanel statsPanel = m_panel.Find<dfPanel>("StatsPanel");
+            Vector3 dims = new Vector3();
+            Vector3 pos = new Vector3();
+
+            GameObject statRowPrefab = Resources.Load("Prefabs/StatRowPrefab") as GameObject;
+
+            float offset = 0;
+            foreach (String name in names)
+            {
+                dfPanel statPanel = statsPanel.AddPrefab(statRowPrefab) as dfPanel;
+                statPanel.name = "Panel" + name;
+                statPanel.Find<dfLabel>("Label").Text = name;
+                statPanel.Position = new Vector3(0, -offset, 0);
+                offset += statPanel.Height;
+            }
+
         }
 
-        public override void PanelActivated()
+        public void UpdatePanel()
         {
             m_panel.FindPath<dfRichTextLabel>("NameAndClass").GetComponent<dfRichTextLabel>().Text = "" + CharacterData.Name + "\n" + CharacterData.ActorClass;
             //GameObject.FindPath(PanelName + "NameAndClass").GetComponent<dfRichTextLabel>().Text = "" + characterData.Name;
-            m_panel.FindPath<dfLabel>("StatsPanel/LevelPanel/Value").Text = "" + CharacterData.Level;
-            m_panel.FindPath<dfLabel>("StatsPanel/XPPanel/Value").Text = "" + CharacterData.XP;
-            m_panel.FindPath<dfLabel>("StatsPanel/NextXPPanel/Value").Text = "" + CharacterData.NEXTXP;
-            m_panel.FindPath<dfLabel>("StatsPanel/HPPanel/Value").Text = "" + CharacterData.HP;
-            m_panel.FindPath<dfLabel>("StatsPanel/DAMPanel/Value").Text = "" + CharacterData.DAM;
-            m_panel.FindPath<dfLabel>("StatsPanel/PWRPanel/Value").Text = "" + CharacterData.PWR;
-            m_panel.FindPath<dfLabel>("StatsPanel/ACCPanel/Value").Text = "" + CharacterData.ACC;
-            m_panel.FindPath<dfLabel>("StatsPanel/DEFPanel/Value").Text = "" + CharacterData.DEF;
-            m_panel.FindPath<dfLabel>("StatsPanel/INIPanel/Value").Text = "" + CharacterData.INI;
-            m_panel.FindPath<dfLabel>("StatsPanel/CONPanel/Value").Text = "" + CharacterData.CON;
-            m_panel.FindPath<dfLabel>("StatsPanel/MOVPanel/Value").Text = "" + CharacterData.MOV;
-            m_panel.FindPath<dfLabel>("StatsPanel/ArmourPanel/Value").Text = "" + "armour";
-            m_panel.FindPath<dfLabel>("StatsPanel/WeaponPanel/Value").Text = "" + "weapon";
-
+            foreach (String name in names)
+            {
+                m_panel.FindPath<dfLabel>("StatsPanel/Panel"+name+"/Value").Text = CharacterData.ValFromName(name);
+            }
             // Try and get a class image?
-            Texture2D classTex = Resources.Load<Texture2D>(GladiusGlobals.UIRoot+"ClassImages/"+CharacterData.ActorClassData.MeshName);
-            if(classTex != null)
+            Texture2D classTex = Resources.Load<Texture2D>(GladiusGlobals.UIRoot + "ClassImages/" + CharacterData.ActorClassData.MeshName);
+            if (classTex != null)
             {
                 m_panel.FindPath<dfTextureSprite>("CharacterSprite").Texture = classTex;
             }
 
+
+        }
+
+        public override void PanelActivated()
+        {
+            UpdatePanel();
         }
     }
 
@@ -584,6 +590,10 @@ public class TownGUIController : MonoBehaviour
     {
         SelectionGrid m_availableGrid;
         SelectionGrid m_selectedGrid;
+        dfPanel m_requiredPanel;
+        dfPanel m_prohibitedPanel;
+        dfPanel m_rhsPanel;
+        //dfPanel m_characterPanel;
 
         public TeamSelectionPanel(BaseGUIPanel parentPanel, TownGUIController townGuiController) : base("TeamSelectionPanel",parentPanel,townGuiController)
         {
@@ -591,16 +601,118 @@ public class TownGUIController : MonoBehaviour
             m_selectedGrid = m_panel.gameObject.AddComponent<SelectionGrid>();
             m_availableGrid.Init(m_panel.Find("AvailablePanel"), "Available",AvailableGrid_Click);
             m_selectedGrid.Init(m_panel.Find("SelectedPanel"), "Selected",SelectedGrid_Click);
+            m_rhsPanel = m_panel.Find<dfPanel>("RHSPanel");
+            m_requiredPanel = m_rhsPanel.Find<dfPanel>("RequiredPanel");
+            m_prohibitedPanel = m_rhsPanel.Find<dfPanel>("ProhibitedPanel");
+
+
         }
+
+        public override void PanelActivated()
+        {
+            base.PanelActivated();
+            if (m_townGuiController.m_selectedEncounter != null)
+            {
+                m_townGuiController.m_selectedEncounter.LoadEncounterData();
+
+                // fill in available panel with school gladiators.
+                int count = 0;
+                m_availableGrid.SetStartDefault(0, 0);
+                foreach(CharacterData characterData in m_townGuiController.m_school.Gladiators.Values)
+                {
+                    if (count < m_availableGrid.MaxSize)
+                    {
+                        m_availableGrid.SetSlot(count++, characterData.ThumbNailName, characterData);
+                    }
+                }
+                m_selectedGrid.SetStartDefault(2, 4);
+
+                // setup required and probhibited text.
+                m_requiredPanel.Find<dfRichTextLabel>("RTL").Text = BuildStringForReqPro(m_townGuiController.m_selectedEncounter.Encounter.Sides[0], true);
+                m_prohibitedPanel.Find<dfRichTextLabel>("RTL").Text = BuildStringForReqPro(m_townGuiController.m_selectedEncounter.Encounter.Sides[0], false);
+            }
+        }
+
+        public String BuildStringForReqPro(EncounterSide side,bool required)
+        {
+            return required ? "Required" : "Prohibited";
+        }
+        
 
         void AvailableGrid_Click(dfControl control, dfMouseEventArgs mouseEvent)
         {
+            // some work here to turn character panel into a prefab?
+            // need to display image of character when selected...?
+            CharacterData cd = control.Tag as CharacterData;
+            if (cd != null)
+            {
+                m_townGuiController.m_currentCharacterData = cd;
+                ShowCharacterPanel();
+                // move control
+                AvailableToSelected(control);
+            }
+            
 
         }
 
         void SelectedGrid_Click(dfControl control, dfMouseEventArgs mouseEvent)
         {
+            SelectedToAvailable(control);
+        }
 
+        void ShowCharacterPanel()
+        {
+            m_requiredPanel.IsVisible = false;
+            m_prohibitedPanel.IsVisible = false;
+            m_townGuiController.m_characterPanel.m_panel.IsVisible = true;
+            m_townGuiController.m_characterPanel.m_panel.transform.parent = m_rhsPanel.transform;
+            m_townGuiController.m_characterPanel.m_panel.Size = m_rhsPanel.Size;
+            m_townGuiController.m_characterPanel.UpdatePanel();
+            //m_townGuiController.m_characterPanel.Yield;
+            //m_townGuiController.m_characterPanel.m_panel.transform.localPosition = new Vector3(0f, 0f, 0f);
+            m_townGuiController.m_characterPanel.m_panel.Position = new Vector3();// transform.localPosition = new Vector3(0f, 0f, 0f);
+            // size to fit.?
+        }
+
+        void HideCharacterPanel()
+        {
+            m_requiredPanel.IsVisible = true;
+            m_prohibitedPanel.IsVisible = true;
+            m_townGuiController.m_characterPanel.m_panel.IsVisible = false;
+            m_townGuiController.m_characterPanel.m_panel.transform.parent = m_rhsPanel.transform;
+            m_townGuiController.m_characterPanel.m_panel.Size = m_rhsPanel.Size;
+            // size to fit.?
+        }
+
+        void AvailableToSelected(dfControl control)
+        {
+            if (m_selectedGrid.EmptySlots > 0)
+            {
+                CharacterData characterData = control.Tag as CharacterData;
+                if (characterData != null)
+                {
+                    int nextSlot = m_selectedGrid.NextAvailableSlot();
+                    if (nextSlot >= 0)
+                    {
+                        m_selectedGrid.SetSlot(nextSlot, characterData.ThumbNailName, characterData);
+                        m_availableGrid.SetSlot(control as dfButton, null);
+                    }
+                }
+            }
+        }
+
+        void SelectedToAvailable(dfControl control)
+        {
+            CharacterData characterData = control.Tag as CharacterData;
+            if (characterData != null)
+            {
+                int nextSlot = m_availableGrid.NextAvailableSlot();
+                if (nextSlot >= 0)
+                {
+                    m_availableGrid.SetSlot(nextSlot, characterData.ThumbNailName, characterData);
+                    m_selectedGrid.SetSlot(control as dfButton, null);
+                }
+            }
         }
 
     }
@@ -615,7 +727,8 @@ public class TownGUIController : MonoBehaviour
             : base("EncounterPanel", parentPanel, townGuiController)
         {
             SlotPrefab = Resources.Load("Prefabs/EncounterListPrefab") as GameObject;
-            
+            townGuiController.m_teamSelectionPanel = new TeamSelectionPanel(this, townGuiController);
+
             dfPanel leagueDisplayPanel = m_panel.Find<dfPanel>("EncounterDisplay");
             int width = (int)(leagueDisplayPanel.Width);
             int height = (int)(leagueDisplayPanel.Height / NumEncounters);
@@ -636,6 +749,7 @@ public class TownGUIController : MonoBehaviour
             }
         }
 
+        
         public override void PanelActivated()
         {
             dfPanel headerPanel = m_panel.Find<dfPanel>("EncounterHeaderPanel");
@@ -664,7 +778,7 @@ public class TownGUIController : MonoBehaviour
                 }
 
             }
-
+            m_townGuiController.m_selectedEncounter = null;
 
         }
 
@@ -674,6 +788,13 @@ public class TownGUIController : MonoBehaviour
             //m_panel.Find("EncounterDataPanel").Find<dfTextureSprite>("LeagueImage").Texture = Resources.Load<Texture2D>(GladiusGlobals.UIRoot + "TownOverland/LeagueImages/" + leagueData.ImageName);
             String info = GladiusGlobals.GameStateManager.LocalisationData[encounter.EncounterDescId];
             m_panel.Find("EncounterDataPanel").Find<dfRichTextLabel>("EncounterName").Text = info;
+            if (encounter == m_townGuiController.m_selectedEncounter)
+            {
+                m_townGuiController.SwitchPanel(m_townGuiController.m_teamSelectionPanel);
+            }
+
+            m_townGuiController.m_selectedEncounter = encounter;
+
         }
     }
 }
