@@ -130,6 +130,7 @@ using System.Xml;
         public static CharacterData GenerateRandomCharacterUNITDB(String[] tokens)
         {
             CharacterData characterData = new CharacterData();
+            // skip first token (unitdb)
             int counter =0;
             String name = tokens[counter++];
             int val1 = int.Parse(tokens[counter++]);
@@ -141,22 +142,14 @@ using System.Xml;
 
             int level = -1; // base of player level?u
 
-
-
             if (minLevel > 0 && maxLevel > 0)
             {
-                
                 level = GladiusGlobals.Random.Next(minLevel, maxLevel);
             }
 
 
             characterData.Level = level;
             characterData.Name = name;
-
-     
-            //characterData
-
-
 
             // seems to be a required mask
             // 0 = mongel? nah
@@ -227,25 +220,23 @@ using System.Xml;
             allowedClasses.Add(class3);
             allowedClasses.Add(class4);
 
-
-
             int val9 = int.Parse(tokens[counter++]);
             int val10 = int.Parse(tokens[counter++]);
             int val11 = int.Parse(tokens[counter++]);
             int val12 = int.Parse(tokens[counter++]);
 
-            String className = characterData.ActorClassData.Name;
-            ModCOREStat statData = StatForClassLevel(className, level);
-            if (statData != null)
-            {
-                characterData.CON = statData.CON;
-                characterData.PWR = statData.PWR;
-                characterData.ACC= statData.ACC;
-                characterData.DEF= statData.DEF;
-                characterData.INI= statData.INI;
-                characterData.MOV= statData.MOV;
-            }
-
+            // character data can act as an empty slot saying whats allowed , as well as being an actual character slot?
+            //String className = characterData.ActorClassData.Name;
+            //ModCOREStat statData = StatForClassLevel(className, level);
+            //if (statData != null)
+            //{
+            //    characterData.CON = statData.CON;
+            //    characterData.PWR = statData.PWR;
+            //    characterData.ACC= statData.ACC;
+            //    characterData.DEF= statData.DEF;
+            //    characterData.INI= statData.INI;
+            //    characterData.MOV= statData.MOV;
+            //}
 
             return characterData;
         }
