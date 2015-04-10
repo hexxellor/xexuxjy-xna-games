@@ -377,7 +377,7 @@ using System.Xml;
     {
         static AttackSkillDictionary()
         {
-            TextAsset textAsset = (TextAsset)Resources.Load("ExtractedData/SkillData");
+            TextAsset textAsset = (TextAsset)Resources.Load(GladiusGlobals.DataRoot + "SkillData");
             String data = textAsset.text;
             Parse(data);
             AssignSubSkills();

@@ -557,7 +557,7 @@ public class PlayerChoiceBar : MonoBehaviour
                     if (Arena.InLevel(p))
                     {
                         MovementGrid.CurrentCursorPoint = p;
-                        SquareType st = Arena.GetSquareTypeAtLocation(MovementGrid.CurrentCursorPoint);
+                        //SquareType st = Arena.GetSquareTypeAtLocation(MovementGrid.CurrentCursorPoint);
                         BaseActor target = Arena.GetActorAtPosition(MovementGrid.CurrentCursorPoint);
                         Point adjustedPoint = MovementGrid.CurrentCursorPoint;
 			

@@ -3,6 +3,7 @@ using System.Collections;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Xml;
 
 //namespace Gladius
 //{
@@ -167,6 +168,14 @@ using System.Diagnostics;
             return v < min ? min : v > max ? max : v;
         }
 
+        public static Vector3 ReadVector3(String path, XmlDocument doc)
+        {
+            Vector3 result = new Vector3();
+            result.x = float.Parse(doc.SelectSingleNode(path + "/@x").InnerText);
+            result.y = float.Parse(doc.SelectSingleNode(path + "/@y").InnerText);
+            result.z = float.Parse(doc.SelectSingleNode(path + "/@z").InnerText);
+            return result;
+        }
 
         public static Quaternion QuatNormalize(Quaternion q)
         {
@@ -247,8 +256,13 @@ using System.Diagnostics;
         public const String EnemyTeam3 = "Enemy3";
 
         static char[] trimChars = new char[] { '"', '\r',' ','\t' };
-        public static String[] SplitAndTidyString(String input,char[] splitChars)
+        public static String[] SplitAndTidyString(String input,char[] splitChars,bool removeComments = true)
         {
+            // strip comments
+            if (removeComments && input.Contains("//"))
+            {
+                input = input.Substring(0, input.IndexOf("//"));
+            }
             String[] lineTokens = input.Split(splitChars);
             List<string> validTokens = new List<string>();
             for (int i = 0; i < lineTokens.Length; ++i)

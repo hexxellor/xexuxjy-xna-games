@@ -37,6 +37,17 @@ using UnityEngine;
             XP = 10;
         }
 
+        public void CopyModCoreStat(ModCOREStat mcs)
+        {
+            CON = mcs.CON;
+            PWR = mcs.PWR;
+            ACC = mcs.ACC;
+            DEF = mcs.DEF;
+            INI = mcs.INI;
+            MOV = mcs.MOV;
+        }
+
+
         public String Name
         {
             get;
@@ -292,6 +303,18 @@ using UnityEngine;
             get;
             set;
         }
+
+        public int RequiredMask
+        { get; set; }
+
+
+        public int MinLevel
+        { get; set; }
+
+        public int MaxLevel
+        { get; set; }
+
+        
         private Item[] m_items = new Item[(int)ItemLocation.NumItems];
         private String[] m_itemNames = new String[(int)ItemLocation.NumItems];
         private String m_infoString;

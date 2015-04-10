@@ -11,7 +11,7 @@ using UnityEngine;
 
         public void Load()
         {
-            TextAsset textAsset = (TextAsset)Resources.Load("ExtractedData/LocalisationData");
+            TextAsset textAsset = (TextAsset)Resources.Load(GladiusGlobals.DataRoot+"LocalisationData");
             String data = textAsset.text;
             String[] lines = textAsset.text.Split(new String[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
             char[] splitTokens = {'^'};

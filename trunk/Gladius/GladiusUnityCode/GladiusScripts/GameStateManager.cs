@@ -6,7 +6,7 @@ using UnityEngine;
 
     public class GameStateManager
     {
-        private GameState m_gameState;
+        private GameState m_gameState = GameState.Town;
         private CommonState m_stateData = null;
 
         private LocalisationData m_localisationData;
@@ -57,49 +57,65 @@ using UnityEngine;
         //public static ItemManager ItemManager = new ItemManager();
         //public static EventLogger EventLogger = new EventLogger(null);
 
-        public void SetStateData(CommonState o)
+        public void SetStateData(CommonState newStateData)
         {
-            m_stateData = o;
+            // copy the current state data into the new?
+            if (m_stateData != null)
+            {
+                m_stateData.StateCleanup();
+            }
+            
+            newStateData.CopyState(m_stateData);
+            m_stateData = newStateData;
+
+            if(m_stateData != null)
+            {
+                m_stateData.StateInit();
+            }
         }
+
+        
 
         public void SetNewState(GameState gameState,object o)
         {
-                if (m_gameState != gameState)
-                {
-                    m_gameState = gameState;
+            if (m_gameState != gameState)
+            {
+                m_gameState = gameState;
 
-                    switch (m_gameState)
-                    {
-                        case(GameState.GameOverLose):
-                            {
-                                Application.LoadLevel("GameOverLose");
-                                break;
-                            }
-                        case(GameState.GameOverWin):
-                            {
-                                Application.LoadLevel("GameOverLose");
-                                break;
-                            }
-                        case(GameState.Town):
-                            {
-                                Application.LoadLevel("Town");
-                                break;
-                            }
-                        case(GameState.Shop):
-                            {
-                                Application.LoadLevel("GameOverLose");
-                                break;
-                            }
-                        case(GameState.OverlandImperia):
-                            {
-                                Application.LoadLevel("ImperiaWorldMap");
-                                break;
-                            }
-                        case(GameState.OverlandNordargh):
-                            {
-                                Application.LoadLevel("NordarghWorldMap");
-                                break;
-                            }
+                // transfer common over. bit yucky
+
+                switch (m_gameState)
+                {
+                    case (GameState.Arena):
+                        {
+                            Application.LoadLevel("ArenaScene");
+                            break;
+                        }
+                    case(GameState.GameOverLose):
+                        {
+                            Application.LoadLevel("GameOverLose");
+                            break;
+                        }
+                    case(GameState.GameOverWin):
+                        {
+                            Application.LoadLevel("GameOverLose");
+                            break;
+                        }
+                    case(GameState.Town):
+                        {
+                            Application.LoadLevel("TownScene");
+                            break;
+                        }
+                    case(GameState.OverlandImperia):
+                        {
+                            Application.LoadLevel("ImperiaWorldMap");
+                            break;
+                        }
+                    case(GameState.OverlandNordargh):
+                        {
+                            Application.LoadLevel("NordarghWorldMap");
+                            break;
+                        }
 
                     }
                 }
@@ -138,12 +154,12 @@ using UnityEngine;
 
         }
 
-        public ShopStateCommon ShopStateCommon
+        public TownStateCommon TownStateCommon
         {
             get
             {
-                System.Diagnostics.Debug.Assert(m_stateData is ShopStateCommon);
-                return m_stateData as ShopStateCommon;
+                System.Diagnostics.Debug.Assert(m_stateData is TownStateCommon);
+                return m_stateData as TownStateCommon; 
             }
 
         }
@@ -155,6 +171,26 @@ using UnityEngine;
         public CameraManager CameraManager;
         public GladiatorSchool GladiatorSchool;
         public TownData TownData;
+        public ArenaEncounter Encounter;
+        public void CopyState(CommonState toCopy)
+        {
+            if(toCopy != null)
+            {
+                CameraManager = toCopy.CameraManager;
+                GladiatorSchool = toCopy.GladiatorSchool;
+                TownData = toCopy.TownData;
+                Encounter = toCopy.Encounter;
+            }
+        }
+
+        public virtual void StateInit()
+        {
+        }
+
+        public virtual void StateCleanup()
+        {
+
+        }
     }
 
     public class ArenaStateCommon : CommonState
@@ -173,8 +209,7 @@ using UnityEngine;
     {
     }
 
-    public class ShopStateCommon : CommonState
+    public class TownStateCommon : CommonState
     {
-
     }
 

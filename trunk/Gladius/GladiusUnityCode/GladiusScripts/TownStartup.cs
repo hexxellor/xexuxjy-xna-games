@@ -2,24 +2,19 @@
 using System.Text;
 using UnityEngine;
 
-public class TownStartup: MonoBehaviour
+public class TownStartup: CommonStartup
 {
     public String TownName = "Trikata";
     public TownData TownData;
 
         // Use this for initialization
-    void Start()
+    public override void ChildStart()
     {
-        if (GladiusGlobals.GameStateManager == null)
-        {
-            GladiusGlobals.GameStateManager = new GameStateManager();
-            GladiusGlobals.GameStateManager.StartGame();
-        }
+        //GladiusGlobals.GameStateManager.SetNewState(GameState.Arena, null);
+        TownStateCommon state = new TownStateCommon();
+        GladiusGlobals.GameStateManager.SetStateData(state);
 
         TownData = GladiusGlobals.GameStateManager.TownManager.Find(TownName);
         GetComponent<TownGUIController>().SetTownData(TownData);
-        //ActorGenerator.Initialise();
-        //AttackSkillDictionary.
-
     }
 }
