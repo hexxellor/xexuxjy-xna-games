@@ -20,11 +20,12 @@ public class TownGUIController : MonoBehaviour
     EncounterPanel m_encounterPanel;
     TeamSelectionPanel m_teamSelectionPanel;
 
-    GladiatorSchool m_school;
+    //GladiatorSchool m_school;
     CharacterData m_currentCharacterData;
     LeagueData m_selectedLeagueData;
-    ArenaEncounter m_selectedEncounter;
+    //ArenaEncounter m_selectedEncounter;
 
+    TownStateCommon m_townStateCommon;
     
 
     // Use this for initialization
@@ -35,18 +36,20 @@ public class TownGUIController : MonoBehaviour
         SwitchPanel(m_townPanel);
         //SwitchPanel(m_characterPanel);
         //SwitchPanel(m_shopItemPanel);
+        m_townStateCommon = GladiusGlobals.GameStateManager.TownStateCommon;
 
-        m_school = new GladiatorSchool();
+        m_townStateCommon.GladiatorSchool = new GladiatorSchool();
         //m_school.Load("Orins-school");
-        m_school.Load("Legionaires-School");
-        if (m_school.Gladiators.Count > 0)
+        m_townStateCommon.GladiatorSchool.Load("Legionaires-School");
+        if (m_townStateCommon.GladiatorSchool.Gladiators.Count > 0)
         {
-            foreach (CharacterData cd in m_school.Gladiators.Values)
+            foreach (CharacterData cd in m_townStateCommon.GladiatorSchool.Gladiators.Values)
             {
                 SetCharacterData(cd);
                 break;
             }
         }
+
     }
 
     void SetupMainMenu()
@@ -605,36 +608,46 @@ public class TownGUIController : MonoBehaviour
             m_requiredPanel = m_rhsPanel.Find<dfPanel>("RequiredPanel");
             m_prohibitedPanel = m_rhsPanel.Find<dfPanel>("ProhibitedPanel");
 
+            dfButton proceedButton = m_panel.Find<dfButton>("ProceedButton");
+            proceedButton.Click += proceedButton_Click;
 
         }
 
         public override void PanelActivated()
         {
             base.PanelActivated();
-            if (m_townGuiController.m_selectedEncounter != null)
+            if (m_townGuiController.m_townStateCommon.Encounter != null)
             {
-                m_townGuiController.m_selectedEncounter.LoadEncounterData();
+                m_townGuiController.m_townStateCommon.Encounter.LoadEncounterData();
 
                 // fill in available panel with school gladiators.
                 int count = 0;
-                m_availableGrid.SetStartDefault(0, 0);
-                foreach(CharacterData characterData in m_townGuiController.m_school.Gladiators.Values)
+                //m_availableGrid.SetStartDefault(0, 0);
+                foreach (CharacterData characterData in m_townGuiController.m_townStateCommon.GladiatorSchool.Gladiators.Values)
                 {
                     if (count < m_availableGrid.MaxSize)
                     {
-                        m_availableGrid.SetSlot(count++, characterData.ThumbNailName, characterData);
+                        m_availableGrid.SetSlot(count++, characterData);
                     }
                 }
-                m_selectedGrid.SetStartDefault(2, 4);
+
+                EncounterSide heroSide = m_townGuiController.m_townStateCommon.Encounter.Encounter.Sides[0];
+                // side 0 is player/ heros team?
+                m_selectedGrid.SetStartDefault(heroSide.CharacterDataList);
+
+                //m_selectedGrid.SetStartDefault(2, 4);
 
                 // setup required and probhibited text.
-                m_requiredPanel.Find<dfRichTextLabel>("RTL").Text = BuildStringForReqPro(m_townGuiController.m_selectedEncounter.Encounter.Sides[0], true);
-                m_prohibitedPanel.Find<dfRichTextLabel>("RTL").Text = BuildStringForReqPro(m_townGuiController.m_selectedEncounter.Encounter.Sides[0], false);
+                m_requiredPanel.Find<dfRichTextLabel>("RTL").Text = BuildStringForReqPro(heroSide.CharacterDataList[0], true);
+                m_prohibitedPanel.Find<dfRichTextLabel>("RTL").Text = BuildStringForReqPro(heroSide.CharacterDataList[0], false);
             }
         }
 
-        public String BuildStringForReqPro(EncounterSide side,bool required)
+        public String BuildStringForReqPro(CharacterData characterData,bool required)
         {
+
+
+
             return required ? "Required" : "Prohibited";
         }
         
@@ -643,10 +656,11 @@ public class TownGUIController : MonoBehaviour
         {
             // some work here to turn character panel into a prefab?
             // need to display image of character when selected...?
-            CharacterData cd = control.Tag as CharacterData;
-            if (cd != null)
+            SlotData slotData = control.Tag as SlotData;
+            CharacterData characterData = slotData.Current;
+            if (characterData != null)
             {
-                m_townGuiController.m_currentCharacterData = cd;
+                m_townGuiController.m_currentCharacterData = characterData;
                 ShowCharacterPanel();
                 // move control
                 AvailableToSelected(control);
@@ -688,13 +702,15 @@ public class TownGUIController : MonoBehaviour
         {
             if (m_selectedGrid.EmptySlots > 0)
             {
-                CharacterData characterData = control.Tag as CharacterData;
+                SlotData slotData = control.Tag as SlotData;
+                CharacterData characterData = slotData.Current;
+
                 if (characterData != null)
                 {
                     int nextSlot = m_selectedGrid.NextAvailableSlot();
                     if (nextSlot >= 0)
                     {
-                        m_selectedGrid.SetSlot(nextSlot, characterData.ThumbNailName, characterData);
+                        m_selectedGrid.SetSlot(nextSlot, characterData);
                         m_availableGrid.SetSlot(control as dfButton, null);
                     }
                 }
@@ -703,16 +719,27 @@ public class TownGUIController : MonoBehaviour
 
         void SelectedToAvailable(dfControl control)
         {
-            CharacterData characterData = control.Tag as CharacterData;
+            SlotData slotData = control.Tag as SlotData;
+            CharacterData characterData = slotData.Current;
+
             if (characterData != null)
             {
                 int nextSlot = m_availableGrid.NextAvailableSlot();
                 if (nextSlot >= 0)
                 {
-                    m_availableGrid.SetSlot(nextSlot, characterData.ThumbNailName, characterData);
+                    m_availableGrid.SetSlot(nextSlot, characterData);
                     m_selectedGrid.SetSlot(control as dfButton, null);
                 }
             }
+        }
+
+        void proceedButton_Click(dfControl control, dfMouseEventArgs mouseEvent)
+        {
+            // do some checks here to make sure all slots are filled and that we have a team to fight with...
+            List<CharacterData> newParty = new List<CharacterData>();
+            m_selectedGrid.FillParty(newParty);
+            GladiusGlobals.GameStateManager.CurrentStateData.GladiatorSchool.SetCurrentParty(newParty);
+            GladiusGlobals.GameStateManager.SetNewState(GameState.Arena,null);
         }
 
     }
@@ -747,8 +774,16 @@ public class TownGUIController : MonoBehaviour
                 panel.RelativePosition = new Vector3(0, i * height);
                 panel.Click += panel_Click;
             }
+
         }
 
+        void proceedButton_Click(dfControl control, dfMouseEventArgs mouseEvent)
+        {
+            // do some checks here to make sure all slots are filled and that we have a team to fight with...
+            List<CharacterData> newParty = new List<CharacterData>();
+
+            GladiusGlobals.GameStateManager.CurrentStateData.GladiatorSchool.SetCurrentParty(newParty);
+        }
         
         public override void PanelActivated()
         {
@@ -778,7 +813,7 @@ public class TownGUIController : MonoBehaviour
                 }
 
             }
-            m_townGuiController.m_selectedEncounter = null;
+            m_townGuiController.m_townStateCommon.Encounter = null;
 
         }
 
@@ -788,12 +823,12 @@ public class TownGUIController : MonoBehaviour
             //m_panel.Find("EncounterDataPanel").Find<dfTextureSprite>("LeagueImage").Texture = Resources.Load<Texture2D>(GladiusGlobals.UIRoot + "TownOverland/LeagueImages/" + leagueData.ImageName);
             String info = GladiusGlobals.GameStateManager.LocalisationData[encounter.EncounterDescId];
             m_panel.Find("EncounterDataPanel").Find<dfRichTextLabel>("EncounterName").Text = info;
-            if (encounter == m_townGuiController.m_selectedEncounter)
+            if (encounter == m_townGuiController.m_townStateCommon.Encounter)
             {
                 m_townGuiController.SwitchPanel(m_townGuiController.m_teamSelectionPanel);
             }
 
-            m_townGuiController.m_selectedEncounter = encounter;
+            m_townGuiController.m_townStateCommon.Encounter = encounter;
 
         }
     }

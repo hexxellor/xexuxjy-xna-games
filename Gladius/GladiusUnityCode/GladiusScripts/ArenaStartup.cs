@@ -4,7 +4,7 @@ using Gladius;
 using System.Collections.Generic;
 using System;
 
-public class ArenaStartup : MonoBehaviour
+public class ArenaStartup : CommonStartup
 {
 
     public GameObject baseActorPrefab;
@@ -21,16 +21,8 @@ public class ArenaStartup : MonoBehaviour
 
 
     // Use this for initialization
-    void Start()
+    public override void ChildStart()
     {
-        if (GladiusGlobals.GameStateManager == null)
-        {
-            GladiusGlobals.GameStateManager = new GameStateManager();
-            GladiusGlobals.GameStateManager.StartGame();
-        }
-
-        //ActorGenerator.Initialise();
-        //AttackSkillDictionary.
 
         ArenaStateCommon state = new ArenaStateCommon();
         state.TurnManager = GetComponent<TurnManager>();
@@ -47,13 +39,19 @@ public class ArenaStartup : MonoBehaviour
 
         List<BaseActor> actors = new List<BaseActor>();
 
-
-        Encounter encounter = Encounter.Load(EncounterFile);
-        foreach (EncounterSide side in encounter.Sides)
+        // not coming from choice screen
+        ArenaEncounter arenaEncounter = state.Encounter;
+        if (arenaEncounter == null)
         {
-            foreach (String name in side.ChosenGladiators)
+            arenaEncounter = new ArenaEncounter();
+            arenaEncounter.Encounter = Encounter.Load(EncounterFile);
+            state.Encounter = arenaEncounter;
+        }
+
+        foreach (EncounterSide side in arenaEncounter.Encounter.Sides)
+        {
+            foreach (CharacterData cd in side.CharacterDataList)
             {
-                CharacterData cd = side.School.Gladiators[name];
                 cd.TeamName = side.TeamName;
                 cd.School = side.School;
                 GameObject baseActorGameObject = (GameObject)Instantiate(baseActorPrefab);
@@ -79,8 +77,6 @@ public class ArenaStartup : MonoBehaviour
         AssignPointList(actors, 1, GladiusGlobals.GameStateManager.ArenaStateCommon.Arena.PlayerPointList, 1);
         AssignPointList(actors, 2, GladiusGlobals.GameStateManager.ArenaStateCommon.Arena.Team1PointList, 0);
         AssignPointList(actors, 3, GladiusGlobals.GameStateManager.ArenaStateCommon.Arena.Team1PointList, 1);
-
-
 
         foreach (BaseActor actor in actors)
         {

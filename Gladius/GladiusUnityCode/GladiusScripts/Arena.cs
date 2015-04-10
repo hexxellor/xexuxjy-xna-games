@@ -16,14 +16,12 @@ using System.Xml;
     public class Arena : MonoBehaviour
     {
 
-        public void SetupData(int width, int breadth)
+        public void SetupData()
         {
-            m_arenaGrid = new SquareType[width, breadth];
-            m_width = width;
-            m_breadth = breadth;
+            //m_arenaGrid = new SquareType[Width, Breadth];
             m_pathFinder = new ArenaPathFinder();
             m_pathFinder.Initialize(this);
-            BuildDefaultArena();
+            //BuildDefaultArena();
         }
 
 
@@ -51,6 +49,10 @@ using System.Xml;
             return true;
         }
 
+        private byte AtPoint(Point p)
+        {
+            return m_arenaGridBytes[(Width * p.Y) + p.X];
+        }
 
         public bool IsPointOccupied(Point p)
         {
@@ -64,20 +66,9 @@ using System.Xml;
             {
                 return true;
             }
-            if (m_arenaGrid[p.X, p.Y] == SquareType.Pillar)
-            {
-                return true;
-            }
-            if (m_arenaGrid[p.X, p.Y] == SquareType.Unaccesible)
-            {
-                return true;
-            }
-            if (m_arenaGrid[p.X, p.Y] == SquareType.Wall)
-            {
-                return true;
-            }
 
-            return false;
+            byte b = AtPoint(p);
+            return b != 0x00;
         }
 
         public bool InLevel(Point p)
@@ -91,23 +82,23 @@ using System.Xml;
             return x >= 0 && x < Width && y >= 0 && y < Breadth;
         }
 
-        public void BuildDefaultArena()
-        {
-            for (int i = 0; i < Width; ++i)
-            {
-                for (int j = 0; j < Breadth; ++j)
-                {
-                    if (i == 0 || j == 0 || i == Width - 1 || j == Breadth - 1)
-                    {
-                        //m_arenaGrid[i, j] = SquareType.Wall;
-                    }
-                    else
-                    {
-                        m_arenaGrid[i, j] = SquareType.Empty;
-                    }
-                }
-            }
-        }
+        //public void BuildDefaultArena()
+        //{
+        //    for (int i = 0; i < Width; ++i)
+        //    {
+        //        for (int j = 0; j < Breadth; ++j)
+        //        {
+        //            if (i == 0 || j == 0 || i == Width - 1 || j == Breadth - 1)
+        //            {
+        //                //m_arenaGrid[i, j] = SquareType.Wall;
+        //            }
+        //            else
+        //            {
+        //                m_arenaGrid[i, j] = SquareType.Empty;
+        //            }
+        //        }
+        //    }
+        //}
 
 
         //public void BuildArena(String arenaDataName)
@@ -178,10 +169,6 @@ using System.Xml;
             {
                 return m_width;
             }
-            set
-            {
-                m_width = value;
-            }
         }
         public int Breadth
         {
@@ -189,18 +176,14 @@ using System.Xml;
             {
                 return m_breadth;
             }
-            set
-            {
-                m_breadth = value;
-            }
         }
 
 
-        public SquareType[,] ArenaGrid
-        {
-            get { return m_arenaGrid; }
-            set { m_arenaGrid = value; }
-        }
+        //public SquareType[,] ArenaGrid
+        //{
+        //    get { return m_arenaGrid; }
+        //    set { m_arenaGrid = value; }
+        //}
 
         public String PrefabName
         {
@@ -298,43 +281,43 @@ using System.Xml;
 
         public float GetHeightAtLocation(Point point)
         {
-            SquareType st = GetSquareTypeAtLocation(point);
             float result = 0;
-            switch (st)
-            {
-                case (SquareType.Level1):
-                    {
-                        result = 0.5f;
-                        break;
-                    }
-                case (SquareType.Level2):
-                    {
-                        result = 1.0f;
-                        break;
-                    }
-                case (SquareType.Level3):
-                    {
-                        result = 1.5f;
-                        break;
-                    }
-                default:
-                    result = 0.0f;
-                    break;
-            }
+            //SquareType st = GetSquareTypeAtLocation(point);
+            //switch (st)
+            //{
+            //    case (SquareType.Level1):
+            //        {
+            //            result = 0.5f;
+            //            break;
+            //        }
+            //    case (SquareType.Level2):
+            //        {
+            //            result = 1.0f;
+            //            break;
+            //        }
+            //    case (SquareType.Level3):
+            //        {
+            //            result = 1.5f;
+            //            break;
+            //        }
+            //    default:
+            //        result = 0.0f;
+            //        break;
+            //}
             return result;
         }
 
-        public SquareType GetSquareTypeAtLocation(Point p)
-        {
-            AssertBounds(p);
-            return m_arenaGrid[p.X, p.Y];
-        }
+        //public SquareType GetSquareTypeAtLocation(Point p)
+        //{
+        //    AssertBounds(p);
+        //    return m_arenaGrid[p.X, p.Y];
+        //}
 
 
-        public SquareType GetSquareTypeAtLocation(int x, int y)
-        {
-            return m_arenaGrid[x, y];
-        }
+        //public SquareType GetSquareTypeAtLocation(int x, int y)
+        //{
+        //    return m_arenaGrid[x, y];
+        //}
 
         public Dictionary<Point, BaseActor> PointActorMap
         {
@@ -630,9 +613,12 @@ using System.Xml;
         public Vector3 ModelScale;
         public Vector3 ModelPosition;
 
-        private SquareType[,] m_arenaGrid;
-        private int m_width;
-        private int m_breadth;
+        private byte[] m_arenaGridBytes;
+        //private SquareType[,] m_arenaGrid;
+        
+        // awlays same size.
+        private int m_width = 32;
+        private int m_breadth = 32;
 
         private Dictionary<Point, BaseActor> m_baseActorMap = new Dictionary<Point, BaseActor>();
         private ArenaPathFinder m_pathFinder;

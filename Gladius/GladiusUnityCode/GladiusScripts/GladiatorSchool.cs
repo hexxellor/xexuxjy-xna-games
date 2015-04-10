@@ -75,6 +75,13 @@ public class GladiatorSchool
         get { return m_currentParty; }
     }
 
+    public void SetCurrentParty(List<CharacterData> party)
+    {
+        m_currentParty.Clear();
+        m_currentParty.AddRange(party);
+    }
+
+
     public void Load(String name)
     {
         TextAsset textAsset = (TextAsset)Resources.Load(GladiusGlobals.SchoolsPath + name);

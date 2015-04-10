@@ -4,10 +4,10 @@ using System;
 //{
     public enum GameState
     {
+        None,
         Arena,
         GameOverWin,
         GameOverLose,
-        Shop,
         Town,
         OverlandNordargh,
         OverlandImperia,
@@ -236,18 +236,18 @@ using System;
         Jump
     }
 
-    public enum SquareType
-    {
-        Empty,
-        Level1,
-        Level2,
-        Level3,
-        Unaccesible,
-        Wall,
-        Crowd,
-        Pillar
-        //Mobile
-    }
+    //public enum SquareType
+    //{
+    //    Empty,
+    //    Level1,
+    //    Level2,
+    //    Level3,
+    //    Unaccesible,
+    //    Wall,
+    //    Crowd,
+    //    Pillar
+    //    //Mobile
+    //}
 
     public enum ControlState
     {

@@ -41,7 +41,7 @@ using UnityEngine;
 
         public void Load()
         {
-            TextAsset textAsset = (TextAsset)Resources.Load("ExtractedData/ItemData");
+            TextAsset textAsset = (TextAsset)Resources.Load(GladiusGlobals.DataRoot + "ItemData");
             Parse(textAsset.text);
         }
 
