@@ -37,7 +37,7 @@ using UnityEngine;
             XP = 10;
         }
 
-        public void CopyModCoreStat(ModCOREStat mcs)
+        public void CopyModCoreStat(StatsSet mcs)
         {
             CON = mcs.CON;
             PWR = mcs.PWR;
@@ -318,5 +318,6 @@ using UnityEngine;
         private Item[] m_items = new Item[(int)ItemLocation.NumItems];
         private String[] m_itemNames = new String[(int)ItemLocation.NumItems];
         private String m_infoString;
+        
         public List<String> m_skillList = new List<String>();
     }
