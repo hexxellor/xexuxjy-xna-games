@@ -12,10 +12,10 @@ public static class ActorGenerator
 {
     static ActorGenerator()
     {
-        InitCategories();
-        LoadALLMODCoreStats();
-        LoadALLMODItemsComp();
-        LoadAllMODSkillSets();
+        InitClassCategories();
+        LoadAllStatsFiles();
+        LoadAllItemsFiles();
+        LoadAllSkillsFiles();
         LoadAllGladiators();
         int ibreak = 0;
     }
@@ -25,25 +25,8 @@ public static class ActorGenerator
 
     }
 
-    //public static void SetActorStats(int level, ActorClass actorClass, CharacterData characterData)
-    //{
-    //    // quick and dirty way of generating characters.
-    //    int accuracy = 10 * level;
-    //    int defense = 12 * level;
-    //    int power = 8 * level;
-    //    int cons = 10 * level;
-
-
-    //    //BaseActor baseActor = new BaseActor();
-    //    characterData.ACC = accuracy;
-    //    characterData.DEF = defense;
-    //    characterData.PWR = power;
-    //    characterData.CON = cons;
-    //    characterData.ActorClass = actorClass;
-    //}
-
-
-    public static void InitCategories()
+    
+    public static void InitClassCategories()
     {
 
         ClassDataMap[ActorClass.Amazon] = new ActorClassData(ActorClass.Amazon, "Amazon", "amazon", (ActorClassAttributes.Female | ActorClassAttributes.Human | ActorClassAttributes.Support));
@@ -124,12 +107,6 @@ public static class ActorGenerator
         ClassDataMap[ActorClass.Yeti] = new ActorClassData(ActorClass.Yeti, "Yeti", "yeti", (ActorClassAttributes.Male | ActorClassAttributes.Beast | ActorClassAttributes.Heavy | ActorClassAttributes.Nordargh));
     }
 
-
-    public static void SetActorSkillStatsForLevel(BaseActor baseActor)
-    {
-
-    }
-
     public static bool CheckLevelUp(CharacterData characterData, int xpGained)
     {
         return false;
@@ -152,7 +129,7 @@ public static class ActorGenerator
         characterData.ActorClass = classData.ActorClass;
 
         String skillSetName = "";
-        ModCOREStat coreStat = StatForClassLevel(characterData.ActorClassData.Name, skillSetName, characterData.Level);
+        StatsSet coreStat = StatForClassLevel(characterData.ActorClassData.Name, skillSetName, characterData.Level);
         characterData.CopyModCoreStat(coreStat);
 
 
@@ -263,7 +240,7 @@ public static class ActorGenerator
         // character data can act as an empty slot saying whats allowed , as well as being an actual character slot?
         String className = characterData.ActorClassData.Name;
         string skillSetName = "";
-        ModCOREStat statData = StatForClassLevel(className, skillSetName, level);
+        StatsSet statData = StatForClassLevel(className, skillSetName, level);
         if (statData != null)
         {
             characterData.CON = statData.CON;
@@ -277,16 +254,16 @@ public static class ActorGenerator
         return characterData;
     }
 
-    public static void LoadALLMODCoreStats()
+    public static void LoadAllStatsFiles()
     {
 
-        TextAsset[] allFiles = Resources.LoadAll<TextAsset>(GladiusGlobals.DataRoot + "ModCoreStatFiles");
+        TextAsset[] allFiles = Resources.LoadAll<TextAsset>(GladiusGlobals.DataRoot + "StatFiles");
         foreach (TextAsset file in allFiles)
         {
             try
             {
                 String[] lines = file.text.Split('\n');
-                LoadMODCOREStats(lines);
+                LoadStatsFile(lines);
             }
             catch (Exception e)
             {
@@ -296,102 +273,113 @@ public static class ActorGenerator
     }
 
 
-    public static void LoadMODCOREStats(String[] fileData)
+    public static void LoadStatsFile(String[] fileData)
     {
         if (fileData.Length > 0)
         {
             String className = "unk";
-            if (fileData[0].StartsWith("// STATSET"))
+            StatsSetBlock setBlock = new StatsSetBlock(fileData[0]);
+            List<String> shortList = new List<String>();
+            char[] splitTokens = new char[] { ' ', ',' };
+            for (int i = 1; i < fileData.Length; ++i)
             {
-                className = fileData[0].Substring(fileData[0].LastIndexOf(":") + 1);
-                className = className.Trim();
-
-                if (!ClassVariantStatData.ContainsKey(className))
+                if (fileData[i].StartsWith("MODCORESTATSCOMP:"))
                 {
-                    ClassVariantStatData[className] = new Dictionary<String, List<ModCOREStat>>();
-                }
-
-
-                List<String> shortList = new List<String>();
-                char[] splitTokens = new char[] { ' ', ',' };
-                for (int i = 1; i < fileData.Length; ++i)
-                {
-                    if (fileData[i].StartsWith("MODCORESTATSCOMP:"))
+                    String[] tokens = fileData[i].Split(splitTokens);
+                    shortList.Clear();
+                    foreach (String token in tokens)
                     {
-                        String[] tokens = fileData[i].Split(splitTokens);
-                        shortList.Clear();
-                        foreach (String token in tokens)
+                        if (!String.IsNullOrEmpty(token))
                         {
-                            if (!String.IsNullOrEmpty(token))
-                            {
-                                shortList.Add(token);
-                            }
+                            shortList.Add(token);
                         }
-                        int counter = 0;
-
-                        String pad = shortList[counter++];
-                        String variant = shortList[counter++];
-                        String level = shortList[counter++];
-                        String con = shortList[counter++];
-                        String pow = shortList[counter++];
-                        String acc = shortList[counter++];
-                        String def = shortList[counter++];
-                        String ini = shortList[counter++];
-                        String mov = shortList[counter++];
-
-                        ModCOREStat modCOREStat = new ModCOREStat();
-                        modCOREStat.className = className;
-                        modCOREStat.variantName = variant;
-                        modCOREStat.level = int.Parse(level);
-                        modCOREStat.CON = int.Parse(con);
-                        modCOREStat.PWR = int.Parse(pow);
-                        modCOREStat.ACC = int.Parse(acc);
-                        modCOREStat.DEF = int.Parse(def);
-                        modCOREStat.INI = int.Parse(ini);
-                        modCOREStat.MOV = float.Parse(mov);
-
-                        List<ModCOREStat> statList;
-                        if (!ClassVariantStatData[className].ContainsKey(variant))
-                        {
-                            ClassVariantStatData[className][variant] = new List<ModCOREStat>();
-                        }
-
-                        statList = ClassVariantStatData[className][variant];
-
-                        statList.Add(modCOREStat);
-
-
-                        int ibreak = 0;
                     }
+                    int counter = 0;
+
+                    String pad = shortList[counter++];
+                    String variant = shortList[counter++];
+                    String level = shortList[counter++];
+                    String con = shortList[counter++];
+                    String pow = shortList[counter++];
+                    String acc = shortList[counter++];
+                    String def = shortList[counter++];
+                    String ini = shortList[counter++];
+                    String mov = shortList[counter++];
+
+                    StatsSet item = new StatsSet();
+                    item.ClassName = className;
+                    item.VariantName = variant;
+                    item.Level = int.Parse(level);
+                    item.CON = int.Parse(con);
+                    item.PWR = int.Parse(pow);
+                    item.ACC = int.Parse(acc);
+                    item.DEF = int.Parse(def);
+                    item.INI = int.Parse(ini);
+                    item.MOV = float.Parse(mov);
+
+                    setBlock.AddItem(item);
+
+                    int ibreak = 0;
                 }
-
-
             }
         }
-
-
-
     }
 
-    public static ModCOREStat StatForClassLevel(string className, string skillsetName, int level)
+    public static StatsSet StatForClassLevel(string className, string skillsetName, int level)
     {
-        ModCOREStat stats = null;
-        Dictionary<String, List<ModCOREStat>> row;
-
-        if (ClassVariantStatData.TryGetValue(className, out row))
+        StatsSet set = null;
+        StatsSetBlock setBlock = null;
+        if (ClassStatsMap.TryGetValue(className, out setBlock))
         {
-            List<ModCOREStat> statRow = null;
-            if (row.TryGetValue(skillsetName, out statRow))
+            List<StatsSet> statRow = null;
+            if (setBlock.SubBlockMap.TryGetValue(skillsetName, out statRow))
             {
                 if (level < statRow.Count)
                 {
-                    stats = statRow[level - 1];
+                    set = statRow[level - 1];
                 }
             }
 
         }
-        return stats;
+        return set;
     }
+
+    public static ItemSet ItemsForClassLevel(string className, string skillsetName, int level)
+    {
+        ItemSet set = null;
+        ItemSetBlock setBlock = null;
+        if (ClassItemsMap.TryGetValue(className, out setBlock))
+        {
+            List<ItemSet> statRow = null;
+            if (setBlock.SubBlockMap.TryGetValue(skillsetName, out statRow))
+            {
+                if (level < statRow.Count)
+                {
+                    set = statRow[level - 1];
+                }
+            }
+
+        }
+        return set;
+    }
+
+    public static List<SkillSetItem> SkillSetForClassLevel(string className, string skillsetName, int level)
+    {
+        List<SkillSetItem> setList = null;
+        SkillSetBlock setBlock = null;
+        if (ClassSkillsMap.TryGetValue(className, out setBlock))
+        {
+            if (setBlock.SubBlockMap.TryGetValue(skillsetName, out setList))
+            {
+            }
+            else
+            {
+            }
+
+        }
+        return setList;
+    }
+
 
     /*
 //name, class, customize info, stats, items, skills, school
@@ -445,21 +433,35 @@ NUMUNITS: 2173
     public static CharacterData FromGladiatorData(GladiatorData gd)
     {
         // find the mod stat;
-        ModCOREStat statData = StatForClassLevel(gd.className, gd.statSetName, gd.level);
-        return null;
+        StatsSet statData = StatForClassLevel(gd.className, gd.statSetName, gd.level);
+        ItemSet itemData = ItemsForClassLevel(gd.className, gd.statSetName, gd.level);
+        List<SkillSetItem> skillSetList = SkillSetForClassLevel(gd.className, gd.statSetName, gd.level);
+
+        CharacterData cd = new CharacterData();
+        cd.Name = gd.name;
+        cd.TeamName = gd.schoolName;
+        statData.Apply(cd);
+        itemData.Apply(cd);
+
+        foreach (SkillSetItem skill in skillSetList)
+        {
+            cd.AddSkill(skill.SkillName);
+        }
+        return cd;
     }
 
 
-    public static void LoadALLMODItemsComp()
+    public static void LoadAllItemsFiles()
     {
 
-        TextAsset[] allFiles = Resources.LoadAll<TextAsset>(GladiusGlobals.DataRoot + "ModItemsFiles");
+        TextAsset[] allFiles = Resources.LoadAll<TextAsset>(GladiusGlobals.DataRoot + "ItemFiles");
         foreach (TextAsset file in allFiles)
         {
             try
             {
                 String[] lines = file.text.Split('\n');
-                ItemSetBlockList.Add(LoadMODItemComp(lines));
+                ItemSetBlock setBlock = LoadItemsFile(lines);
+                ClassItemsMap[setBlock.MainClass] = setBlock;
             }
             catch (Exception e)
             {
@@ -469,7 +471,7 @@ NUMUNITS: 2173
         }
     }
 
-    public static List<ItemSetBlock> LoadMODItemComp(String[] lines)
+    public static ItemSetBlock LoadItemsFile(String[] lines)
     {
         ////// ITEMSET export Class: Galverg Galverg  Region: Imperia Affinity: Earth
         //          :      variant, Lv,Lv,                          weapon,                           armor,                          shield,                          helmet             accessory
@@ -477,41 +479,35 @@ NUMUNITS: 2173
         //MODITEMSCOMP:    itemsetIE,  2, 2,                              "",                              "",                              "",                              "",                 "Earth Berkana" 	//, Cost, 001188,001188,Acc,Def,0000,0000
 
 
-        List<ItemSetBlock> itemSets = new List<ItemSetBlock>();
-        ItemSetBlock currentItemSetBlock = null;
+        ItemSetBlock currentItemSetBlock = new ItemSetBlock(lines[0]);
         foreach (String line in lines)
         {
-            if (line.StartsWith("////// ITEMSET"))
-            {
-                currentItemSetBlock = new ItemSetBlock(line);
-                itemSets.Add(currentItemSetBlock);
-            }
-
             if (line.StartsWith("MODITEMSCOMP:"))
             {
 
                 string[] lineTokens = GladiusGlobals.SplitAndTidyString(line, new char[] { ',', ':' });
                 if (lineTokens.Length == 9)
                 {
-                    ModITEMStat modItemStat = new ModITEMStat(lineTokens);
+                    ItemSet modItemStat = new ItemSet(lineTokens);
                     currentItemSetBlock.AddItem(modItemStat);
                 }
 
             }
         }
-        return itemSets;
+        return currentItemSetBlock;
     }
 
 
-    public static void LoadAllMODSkillSets()
+    public static void LoadAllSkillsFiles()
     {
-        TextAsset[] allFiles = Resources.LoadAll<TextAsset>(GladiusGlobals.DataRoot + "ModSkillFiles");
+        TextAsset[] allFiles = Resources.LoadAll<TextAsset>(GladiusGlobals.DataRoot + "SkillFiles");
         foreach (TextAsset file in allFiles)
         {
             try
             {
                 String[] lines = file.text.Split('\n');
-                SkillSetBlockList.Add(LoadMODSkillSet(lines));
+                SkillSetBlock setBlock = LoadSkillsFile(lines);
+                ClassSkillsMap[setBlock.MainClass] = setBlock;
             }
             catch (Exception e)
             {
@@ -521,22 +517,20 @@ NUMUNITS: 2173
         }
     }
 
-    public static List<SkillSetBlock> LoadMODSkillSet(String[] lines)
+    public static SkillSetBlock LoadSkillsFile(String[] lines)
     {
         ////// SKILLSET export Class: Scorpion Scorpion  Affinity: None
         //MODLEVELRANGESKILL:  skillsetcomb,  0, 30, "Scorpion Attack"                 // JP:   0/  0	AccMod -2
         //MODLEVELRANGESKILL:  skillsetcomb,  0, 30, "Scorpion Evade"                  // JP:   0/  0	AccMod 0
 
+        SkillSetBlock currentSetBlock = new SkillSetBlock(lines[0]);
 
-        List<SkillSetBlock> skillSets = new List<SkillSetBlock>();
-        SkillSetBlock currentSetBlock = null;
         foreach (String line in lines)
         {
-            if (line.StartsWith("////// SKILLSET"))
-            {
-                currentSetBlock = new SkillSetBlock(line);
-                skillSets.Add(currentSetBlock);
-            }
+            //if (line.StartsWith("////// SKILLSET"))
+            //{
+            //    skillSets.Add(currentSetBlock);
+            //}
 
             if (line.StartsWith("MODLEVELRANGESKILL:"))
             {
@@ -544,24 +538,23 @@ NUMUNITS: 2173
                 string[] lineTokens = GladiusGlobals.SplitAndTidyString(line, new char[] { ',', ':' });
                 if (lineTokens.Length == 9)
                 {
-                    SkillStat skill = new SkillStat(lineTokens);
+                    SkillSetItem skill = new SkillSetItem(lineTokens);
                     currentSetBlock.AddItem(skill);
                 }
 
             }
         }
-        return skillSets;
-
-
+        return currentSetBlock;
     }
 
 
-    public static List<List<SkillSetBlock>> SkillSetBlockList = new List<List<SkillSetBlock>>();
-    public static List<List<ItemSetBlock>> ItemSetBlockList = new List<List<ItemSetBlock>>();
-    public static Dictionary<String, List<GladiatorData>> SchoolsAndGladiators = new Dictionary<string, List<GladiatorData>>();
-    public static Dictionary<String, Dictionary<String, List<ModCOREStat>>> ClassVariantStatData = new Dictionary<String, Dictionary<String, List<ModCOREStat>>>();
-    public static Dictionary<ActorClass, ActorClassData> ClassDataMap = new Dictionary<ActorClass, ActorClassData>();
+    public static Dictionary<String, SkillSetBlock> ClassSkillsMap = new Dictionary<string, SkillSetBlock>();
+    public static Dictionary<String, ItemSetBlock> ClassItemsMap = new Dictionary<string, ItemSetBlock>();
+    public static Dictionary<String, StatsSetBlock> ClassStatsMap = new Dictionary<string, StatsSetBlock>();
 
+
+    public static Dictionary<String, List<GladiatorData>> SchoolsAndGladiators = new Dictionary<string, List<GladiatorData>>();
+    public static Dictionary<ActorClass, ActorClassData> ClassDataMap = new Dictionary<ActorClass, ActorClassData>();
     public static Dictionary<ActorClass, int[]> ActorXPLevels = new Dictionary<ActorClass, int[]>();
 
 }
@@ -641,11 +634,46 @@ public enum ActorClassAttributes
 }
 
 
-public class ModCOREStat
+public class StatsSetBlock
 {
-    public String className;
-    public String variantName;
-    public int level;
+    public StatsSetBlock(String line)
+    {
+       string[] lineTokens = GladiusGlobals.SplitAndTidyString(line, new char[] { ' ' }, false);
+        if (lineTokens.Length == 5)
+        {
+            MainClass = lineTokens[4];
+        }
+        else
+        {
+            int ibreak = 0;
+        }
+ 
+    }
+
+    public void AddItem(StatsSet set)
+    {
+        List<StatsSet> setList = null;
+        if (!SubBlockMap.TryGetValue(set.VariantName, out setList))
+        {
+            setList = new List<StatsSet>();
+            SubBlockMap[set.VariantName] = setList;
+        }
+
+        setList.Add(set);
+
+    }
+
+    string MainClass;
+    public Dictionary<String, List<StatsSet>> SubBlockMap = new Dictionary<string, List<StatsSet>>();
+
+}
+
+
+public class StatsSet
+{
+    public String ClassName;
+    public String VariantName;
+    public int Level;
     public int CON;
     public int PWR;
     public int ACC;
@@ -653,12 +681,25 @@ public class ModCOREStat
     public int INI;
     public float MOV;
 
+
+    public void Apply(CharacterData characterData)
+    {
+        characterData.Level = Level;
+        characterData.CON = CON;
+        characterData.PWR = PWR;
+        characterData.ACC = ACC;
+        characterData.DEF = DEF;
+        characterData.INI = INI;
+        characterData.MOV = MOV;
+    }
+
+
 }
 
-public class ModITEMStat
+public class ItemSet
 {
     //public ModITEMStat(ItemSetSubBlock ownerBlock, String[] fields)
-    public ModITEMStat(String[] fields)
+    public ItemSet(String[] fields)
     {
         if (fields.Length == 9)
         {
@@ -676,6 +717,30 @@ public class ModITEMStat
         else
         {
             int ibreak = 0;
+        }
+    }
+
+    public void Apply(CharacterData characterData)
+    {
+        if (!String.IsNullOrEmpty(Weapon))
+        {
+            characterData.AddItemByNameAndLoc(Weapon, ItemLocation.Weapon);
+        }
+        if (!String.IsNullOrEmpty(Armor))
+        {
+            characterData.AddItemByNameAndLoc(Armor, ItemLocation.Armor);
+        }
+        if (!String.IsNullOrEmpty(Shield))
+        {
+            characterData.AddItemByNameAndLoc(Shield, ItemLocation.Shield);
+        }
+        if (!String.IsNullOrEmpty(Helmet))
+        {
+            characterData.AddItemByNameAndLoc(Helmet, ItemLocation.Helmet);
+        }
+        if (!String.IsNullOrEmpty(Accessory))
+        {
+            characterData.AddItemByNameAndLoc(Accessory, ItemLocation.Accessory);
         }
     }
 
@@ -702,7 +767,7 @@ public class ItemSetBlock
             MainClass = lineTokens[4];
             SubClass = lineTokens[5];
             Region = lineTokens[7];
-            Affinity = lineTokens[8];
+            //Affinity = lineTokens[8];
         }
         else
         {
@@ -710,12 +775,12 @@ public class ItemSetBlock
         }
     }
 
-    public void AddItem(ModITEMStat itemStat)
+    public void AddItem(ItemSet itemStat)
     {
-        List<ModITEMStat> statList = null;
+        List<ItemSet> statList = null;
         if (!SubBlockMap.TryGetValue(itemStat.VariantName, out statList))
         {
-            statList = new List<ModITEMStat>();
+            statList = new List<ItemSet>();
             SubBlockMap[itemStat.VariantName] = statList;
         }
 
@@ -724,11 +789,11 @@ public class ItemSetBlock
     }
 
 
-    string MainClass;
-    string SubClass;
-    string Region;
-    string Affinity;
-    public Dictionary<String, List<ModITEMStat>> SubBlockMap = new Dictionary<string, List<ModITEMStat>>();
+    public string MainClass;
+    public string SubClass;
+    public string Region;
+    //string Affinity;
+    public Dictionary<String, List<ItemSet>> SubBlockMap = new Dictionary<string, List<ItemSet>>();
 
 }
 
@@ -742,7 +807,7 @@ public class SkillSetBlock
         {
             MainClass = lineTokens[4];
             SubClass = lineTokens[5];
-            Affinity = lineTokens[7];
+      //      Affinity = lineTokens[7];
         }
         else
         {
@@ -750,12 +815,12 @@ public class SkillSetBlock
         }
     }
 
-    public void AddItem(SkillStat skillStat)
+    public void AddItem(SkillSetItem skillStat)
     {
-        List<SkillStat> statList = null;
+        List<SkillSetItem> statList = null;
         if (!SubBlockMap.TryGetValue(skillStat.VariantName, out statList))
         {
-            statList = new List<SkillStat>();
+            statList = new List<SkillSetItem>();
             SubBlockMap[skillStat.VariantName] = statList;
         }
 
@@ -764,17 +829,17 @@ public class SkillSetBlock
     }
 
 
-    string MainClass;
-    string SubClass;
-    string Affinity;
-    public Dictionary<String, List<SkillStat>> SubBlockMap = new Dictionary<string, List<SkillStat>>();
+    public string MainClass;
+    public string SubClass;
+    //string Affinity;
+    public Dictionary<String, List<SkillSetItem>> SubBlockMap = new Dictionary<string, List<SkillSetItem>>();
 
 }
 
 //MODLEVELRANGESKILL:  skillsetaffE,  0, 30, "Scorpion Attack"                 // JP:   0/  0	AccMod -2
-public class SkillStat
+public class SkillSetItem
 {
-    public SkillStat(String[] tokens)
+    public SkillSetItem(String[] tokens)
     {
         int index = 1;
         VariantName = tokens[index++];

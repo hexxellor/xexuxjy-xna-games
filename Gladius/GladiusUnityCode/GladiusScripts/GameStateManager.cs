@@ -49,7 +49,7 @@ using UnityEngine;
             TownManager.Load();
 
 
-            ActorGenerator.InitCategories();
+            ActorGenerator.InitClassCategories();
 
         }
 
