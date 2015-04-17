@@ -26,7 +26,28 @@ public class TownGUIController : MonoBehaviour
     //ArenaEncounter m_selectedEncounter;
 
     TownStateCommon m_townStateCommon;
-    
+
+
+    public static void LayoutControlsInContainer(List<dfControl> controls, dfControl container, int x, int y)
+    {
+        int width = (int)(container.Width / x);
+        int height = (int)(container.Height / y);
+
+        int counter = 0;
+        //string background1 = "king of the hill ke.tga";
+        //string background2 = "mystical zo.tga";
+        for (int i = 0; i < y; ++i)
+        {
+            for (int j = 0; j < x; ++j)
+            {
+                int index = (i * x) + j;
+                controls[index].Width = width;
+                controls[index].Height = height;
+                controls[index].RelativePosition = new Vector3(j * width, i * height);
+            }
+        }
+    }
+
 
     // Use this for initialization
     void Start()
@@ -203,12 +224,13 @@ public class TownGUIController : MonoBehaviour
         public String m_panelName;
         public int m_currentSelection;
         public BaseGUIPanel m_parentPanel;
-        public List<dfButton> m_buttonList = new List<dfButton>();
+        public List<dfControl> m_controlsList = new List<dfControl>();
 
         public String m_leaveName = "LeaveButton";
+        public dfControl m_leaveButton;
         protected TownData m_townData;
 
-        public BaseGUIPanel(String panelName,BaseGUIPanel parentPanel, TownGUIController townGuiController)
+        public BaseGUIPanel(String panelName, BaseGUIPanel parentPanel, TownGUIController townGuiController)
         {
             m_panelName = panelName;
             m_parentPanel = parentPanel;
@@ -218,7 +240,8 @@ public class TownGUIController : MonoBehaviour
             dfControl leaveButton = m_panel.Find(m_leaveName);
             if (leaveButton != null)
             {
-                leaveButton.Click += leaveButton_Click;
+                m_leaveButton = leaveButton;
+                m_leaveButton.Click += leaveButton_Click;
             }
             //m_panel.gameObject.SetActive(false);
             //m_panel.gameObject.GetComponent<Renderer>().enabled = false;
@@ -269,18 +292,21 @@ public class TownGUIController : MonoBehaviour
     {
 
         public TownMenuPanel(BaseGUIPanel parentPanel, TownGUIController townGuiController)
-            : base("MainMenuPanel",parentPanel, townGuiController)
+            : base("MainMenuPanel", parentPanel, townGuiController)
         {
-            m_buttonList.Add(m_panel.FindPath<dfButton>("TownMenuPanel/ShopButton"));
-            m_buttonList.Add(m_panel.FindPath<dfButton>("TownMenuPanel/ArenaButton"));
-            m_buttonList.Add(m_panel.FindPath<dfButton>("TownMenuPanel/SchoolButton"));
-            m_buttonList.Add(m_panel.FindPath<dfButton>("TownMenuPanel/LeaveButton"));
+            dfPanel townPanel = m_panel.Find<dfPanel>("TownMenuPanel");
 
+            m_controlsList.Add(m_panel.FindPath<dfButton>("TownMenuPanel/ShopButton"));
+            m_controlsList.Add(m_panel.FindPath<dfButton>("TownMenuPanel/ArenaButton"));
+            m_controlsList.Add(m_panel.FindPath<dfButton>("TownMenuPanel/SchoolButton"));
+            m_controlsList.Add(m_panel.FindPath<dfButton>("TownMenuPanel/LeaveButton"));
 
-            m_buttonList[0].Click += TownMenuPanel_Click;
-            m_buttonList[1].Click += TownMenuPanel_Click;
-            m_buttonList[2].Click += TownMenuPanel_Click;
-            m_buttonList[3].Click += TownMenuPanel_Click;
+            LayoutControlsInContainer(m_controlsList, townPanel, 1,m_controlsList.Count);
+
+            m_controlsList[0].Click += TownMenuPanel_Click;
+            m_controlsList[1].Click += TownMenuPanel_Click;
+            m_controlsList[2].Click += TownMenuPanel_Click;
+            m_controlsList[3].Click += TownMenuPanel_Click;
         }
 
         void TownMenuPanel_Click(dfControl control, dfMouseEventArgs mouseEvent)
@@ -339,13 +365,16 @@ public class TownGUIController : MonoBehaviour
     public class ShopMenuPanel : BaseGUIPanel
     {
         public ShopMenuPanel(BaseGUIPanel parentPanel, TownGUIController townGuiController)
-            : base("ShopPanel",parentPanel, townGuiController)
+            : base("ShopPanel", parentPanel, townGuiController)
         {
-            m_buttonList.Add(GameObject.Find("ShopItemButton").GetComponent<dfButton>());
-            m_buttonList.Add(GameObject.Find("ShopChatButton").GetComponent<dfButton>());
-            //m_buttonList.Add(GameObject.Find("ShopLeaveButton").GetComponent<dfButton>());
+            dfControl panel = m_panel.Find<dfControl>("ShopMenuPanel");
+            m_controlsList.Add(GameObject.Find("ItemButton").GetComponent<dfButton>());
+            m_controlsList.Add(GameObject.Find("ChatButton").GetComponent<dfButton>());
+            m_controlsList.Add(GameObject.Find("LeaveButton").GetComponent<dfButton>());
 
-            foreach (dfControl dfc in m_buttonList)
+            LayoutControlsInContainer(m_controlsList, panel, 1, m_controlsList.Count);
+
+            foreach (dfControl dfc in m_controlsList)
             {
                 dfButton button = dfc as dfButton;
                 if (button != null)
@@ -359,7 +388,7 @@ public class TownGUIController : MonoBehaviour
 
         void ShopMenuPanel_Click(dfControl control, dfMouseEventArgs mouseEvent)
         {
-            if (control.gameObject.name == "ShopItemButton")
+            if (control.gameObject.name == "ItemButton")
             {
                 m_townGuiController.SwitchPanel(m_townGuiController.m_shopItemPanel);
             }
@@ -377,7 +406,7 @@ public class TownGUIController : MonoBehaviour
     public class ShopItemMenuPanel : BaseGUIPanel
     {
         public ShopItemMenuPanel(BaseGUIPanel parentPanel, TownGUIController townGuiController)
-            : base("ShopItemPanel",parentPanel, townGuiController)
+            : base("ShopItemPanel", parentPanel, townGuiController)
         {
         }
 
@@ -394,17 +423,20 @@ public class TownGUIController : MonoBehaviour
             : base("ArenaPanel", parentPanel, townGuiController)
         {
             townGuiController.m_leaguePanel = new LeagueMenuPanel(this, townGuiController);
-            m_buttonList.Add(GameObject.Find("ChampionshipButton").GetComponent<dfButton>());
-            m_buttonList.Add(GameObject.Find("TournamentButton").GetComponent<dfButton>());
-            m_buttonList.Add(GameObject.Find("LeaguesButton").GetComponent<dfButton>());
-            m_buttonList.Add(GameObject.Find("RecruitingButton").GetComponent<dfButton>());
-            m_buttonList.Add(GameObject.Find("HistoryButton").GetComponent<dfButton>());
+            dfControl panel = m_panel.Find<dfPanel>("LeagueMenuPanel");
+            m_controlsList.Add(m_panel.Find("ChampionshipButton").GetComponent<dfButton>());
+            m_controlsList.Add(m_panel.Find("TournamentButton").GetComponent<dfButton>());
+            m_controlsList.Add(m_panel.Find("LeaguesButton").GetComponent<dfButton>());
+            m_controlsList.Add(m_panel.Find("RecruitingButton").GetComponent<dfButton>());
+            m_controlsList.Add(m_panel.Find("HistoryButton").GetComponent<dfButton>());
+            m_controlsList.Add(m_panel.Find("LeaveButton").GetComponent<dfButton>());
 
-            m_buttonList[0].Click += ArenaMenuPanel_Click;
-            m_buttonList[1].Click += ArenaMenuPanel_Click;
-            m_buttonList[2].Click += ArenaMenuPanel_Click;
-            m_buttonList[3].Click += ArenaMenuPanel_Click;
-            m_buttonList[4].Click += ArenaMenuPanel_Click;
+            LayoutControlsInContainer(m_controlsList, panel, 1, m_controlsList.Count);
+
+            foreach (dfControl control in m_controlsList)
+            {
+                control.Click += ArenaMenuPanel_Click;
+            }
 
         }
 
@@ -422,7 +454,7 @@ public class TownGUIController : MonoBehaviour
             {
                 m_townGuiController.SwitchPanel(m_townGuiController.m_leaguePanel);
             }
-            
+
         }
 
         public override void PanelActivated()
@@ -439,11 +471,11 @@ public class TownGUIController : MonoBehaviour
     public class LeagueMenuPanel : BaseGUIPanel
     {
         public GameObject SlotPrefab;
-        private List<dfPanel> m_leaguePanels = new List<dfPanel>();
+        private List<dfButton> m_leaguePanels = new List<dfButton>();
         int SlotsH = 3;
         int SlotsV = 2;
         public LeagueMenuPanel(BaseGUIPanel parentPanel, TownGUIController townGuiController)
-            : base("LeaguePanel",parentPanel, townGuiController)
+            : base("LeaguePanel", parentPanel, townGuiController)
         {
             SlotPrefab = Resources.Load("Prefabs/LeagueSlotPrefab") as GameObject;
             townGuiController.m_encounterPanel = new EncounterPanel(this, townGuiController);
@@ -460,7 +492,7 @@ public class TownGUIController : MonoBehaviour
                 {
                     int index = (i * SlotsH) + j;
 
-                    dfPanel panel = leagueDisplayPanel.AddPrefab(SlotPrefab) as dfPanel;
+                    dfButton panel = leagueDisplayPanel.AddPrefab(SlotPrefab) as dfButton;
                     m_leaguePanels.Add(panel);
                     panel.Width = width;
                     panel.Height = height;
@@ -481,7 +513,7 @@ public class TownGUIController : MonoBehaviour
             dfPanel leagueDisplayPanel = m_panel.Find<dfPanel>("LeagueDisplay");
             int width = (int)(leagueDisplayPanel.Width / SlotsH);
             int height = (int)(leagueDisplayPanel.Height / SlotsV);
-           
+
             int counter = 0;
             //string background1 = "king of the hill ke.tga";
             //string background2 = "mystical zo.tga";
@@ -490,7 +522,7 @@ public class TownGUIController : MonoBehaviour
                 for (int j = 0; j < SlotsH; ++j)
                 {
                     int index = (i * SlotsH) + j;
-                    dfPanel panel = m_leaguePanels[index];
+                    dfButton panel = m_leaguePanels[index];
 
                     if (index < TownData.ArenaData.Leagues.Count)
                     {
@@ -532,7 +564,7 @@ public class TownGUIController : MonoBehaviour
     public class SchoolMenuPanel : BaseGUIPanel
     {
         public SchoolMenuPanel(BaseGUIPanel parentPanel, TownGUIController townGuiController)
-            : base("SchoolPanel",parentPanel, townGuiController)
+            : base("SchoolPanel", parentPanel, townGuiController)
         {
         }
 
@@ -545,7 +577,7 @@ public class TownGUIController : MonoBehaviour
         String[] names = new String[] { "LVL", "XP", "Next", "HP", "DAM", "PWR", "ACC", "DEF", "INI", "CON", "MOV", "Arm", "Wpn" };
 
         public CharacterPanel(BaseGUIPanel parentPanel, TownGUIController townGuiController)
-            : base("CharacterPanel",parentPanel, townGuiController)
+            : base("CharacterPanel", parentPanel, townGuiController)
         {
             dfPanel statsPanel = m_panel.Find<dfPanel>("StatsPanel");
             Vector3 dims = new Vector3();
@@ -571,7 +603,7 @@ public class TownGUIController : MonoBehaviour
             //GameObject.FindPath(PanelName + "NameAndClass").GetComponent<dfRichTextLabel>().Text = "" + characterData.Name;
             foreach (String name in names)
             {
-                m_panel.FindPath<dfLabel>("StatsPanel/Panel"+name+"/Value").Text = CharacterData.ValFromName(name);
+                m_panel.FindPath<dfLabel>("StatsPanel/Panel" + name + "/Value").Text = CharacterData.ValFromName(name);
             }
             // Try and get a class image?
             Texture2D classTex = Resources.Load<Texture2D>(GladiusGlobals.UIRoot + "ClassImages/" + CharacterData.ActorClassData.MeshName);
@@ -598,20 +630,30 @@ public class TownGUIController : MonoBehaviour
         dfPanel m_rhsPanel;
         //dfPanel m_characterPanel;
 
-        public TeamSelectionPanel(BaseGUIPanel parentPanel, TownGUIController townGuiController) : base("TeamSelectionPanel",parentPanel,townGuiController)
+        public TeamSelectionPanel(BaseGUIPanel parentPanel, TownGUIController townGuiController)
+            : base("TeamSelectionPanel", parentPanel, townGuiController)
         {
             m_availableGrid = m_panel.gameObject.AddComponent<SelectionGrid>();
             m_selectedGrid = m_panel.gameObject.AddComponent<SelectionGrid>();
-            m_availableGrid.Init(m_panel.Find("AvailablePanel"), "Available",AvailableGrid_Click);
-            m_selectedGrid.Init(m_panel.Find("SelectedPanel"), "Selected",SelectedGrid_Click);
+            m_availableGrid.Init(m_panel.Find("AvailablePanel"), "Available", AvailableGrid_Click);
+            m_selectedGrid.Init(m_panel.Find("SelectedPanel"), "Selected", SelectedGrid_Click);
             m_rhsPanel = m_panel.Find<dfPanel>("RHSPanel");
             m_requiredPanel = m_rhsPanel.Find<dfPanel>("RequiredPanel");
             m_prohibitedPanel = m_rhsPanel.Find<dfPanel>("ProhibitedPanel");
 
+            dfControl panel = m_panel.Find<dfControl>("ButtonPanel");
+
             dfButton proceedButton = m_panel.Find<dfButton>("ProceedButton");
             proceedButton.Click += proceedButton_Click;
+            m_controlsList.Add(proceedButton);
+            m_controlsList.Add(m_leaveButton);
+
+            LayoutControlsInContainer(m_controlsList, panel, m_controlsList.Count,1);
+
 
         }
+
+
 
         public override void PanelActivated()
         {
@@ -643,14 +685,14 @@ public class TownGUIController : MonoBehaviour
             }
         }
 
-        public String BuildStringForReqPro(CharacterData characterData,bool required)
+        public String BuildStringForReqPro(CharacterData characterData, bool required)
         {
 
 
 
             return required ? "Required" : "Prohibited";
         }
-        
+
 
         void AvailableGrid_Click(dfControl control, dfMouseEventArgs mouseEvent)
         {
@@ -665,7 +707,7 @@ public class TownGUIController : MonoBehaviour
                 // move control
                 AvailableToSelected(control);
             }
-            
+
 
         }
 
@@ -739,7 +781,7 @@ public class TownGUIController : MonoBehaviour
             List<CharacterData> newParty = new List<CharacterData>();
             m_selectedGrid.FillParty(newParty);
             GladiusGlobals.GameStateManager.CurrentStateData.GladiatorSchool.SetCurrentParty(newParty);
-            GladiusGlobals.GameStateManager.SetNewState(GameState.Arena,null);
+            GladiusGlobals.GameStateManager.SetNewState(GameState.Arena, null);
         }
 
     }
@@ -784,7 +826,7 @@ public class TownGUIController : MonoBehaviour
 
             GladiusGlobals.GameStateManager.CurrentStateData.GladiatorSchool.SetCurrentParty(newParty);
         }
-        
+
         public override void PanelActivated()
         {
             dfPanel headerPanel = m_panel.Find<dfPanel>("EncounterHeaderPanel");
@@ -803,7 +845,7 @@ public class TownGUIController : MonoBehaviour
                 {
                     panel.IsVisible = true;
                     ArenaEncounter encounter = m_townGuiController.m_selectedLeagueData.ArenaEncounters[i];
-                    panel.Find<dfRichTextLabel>("Name").Text = GladiusGlobals.GameStateManager.LocalisationData[encounter.Id]; 
+                    panel.Find<dfRichTextLabel>("Name").Text = GladiusGlobals.GameStateManager.LocalisationData[encounter.Id];
                     //panel.Find<dfTextureSprite>("Points").Texture = Resources.Load<Texture2D>(GladiusGlobals.UIRoot + "TownOverland/LeagueImages/" + leagueData.ImageName);
                     panel.Tag = encounter;
                 }
@@ -832,6 +874,11 @@ public class TownGUIController : MonoBehaviour
 
         }
     }
+
+
+
+
+
 }
 
 

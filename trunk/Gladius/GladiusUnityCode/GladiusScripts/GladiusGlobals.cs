@@ -256,7 +256,7 @@ using System.Xml;
         public const String EnemyTeam3 = "Enemy3";
 
         static char[] trimChars = new char[] { '"', '\r',' ','\t' };
-        public static String[] SplitAndTidyString(String input,char[] splitChars,bool removeComments = true)
+        public static String[] SplitAndTidyString(String input,char[] splitChars,bool removeComments = true,bool removeEmpty=true)
         {
             // strip comments
             if (removeComments && input.Contains("//"))
@@ -273,7 +273,7 @@ using System.Xml;
                 {
                     lineTokens[i] = lineTokens[i].Substring(0, commentIndex);
                 }
-                if (!String.IsNullOrEmpty(lineTokens[i]))
+                if (!removeEmpty || !String.IsNullOrEmpty(lineTokens[i]))
                 {
                     validTokens.Add(lineTokens[i]);
                 }

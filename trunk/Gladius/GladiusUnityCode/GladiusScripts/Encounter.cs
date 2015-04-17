@@ -84,15 +84,21 @@ TOTALPOP:	50
                     }
 					//heroName = lineTokens[1];
 				}
-				else if (lineTokens[0] == "GLADIATOR")
-				{
-					side.ChosenGladiators.Add(lineTokens[1]);
-				}
+                else if (lineTokens[0] == "SCHOOL")
+                {
+                    side.SchoolName = lineTokens[1];
+                }
+                else if (lineTokens[0] == "GLADIATOR")
+                {
+                    side.ChosenGladiators.Add(lineTokens[1]);
+                }
                 else if (lineTokens[0] == "UNITDB")
                 {
                     string shrunkLine = line.Replace("UNITDB: \t", "");
-                    string[] subtokens = shrunkLine.Split(',');
+                    //string[] subtokens = shrunkLine.Split(',');
+                    string[] subtokens = GladiusGlobals.SplitAndTidyString(shrunkLine, new char[] { ',' }, removeComments: true, removeEmpty: false);
                     CharacterData characterData = ActorGenerator.ParseUNITDB(subtokens);
+                    characterData.TeamName = side.SchoolName;
 
                     CharacterData completeCharacterData = ActorGenerator.CreateRandomCharacterForLevel(characterData);
 
@@ -113,6 +119,7 @@ public class EncounterSide
     public EncounterSide()
     {
         ChosenGladiators = new List<string>();
+        SchoolName = "ImperiaOrusOrcusDomini";
     }
 
     public GladiatorSchool School
@@ -127,6 +134,13 @@ public class EncounterSide
         get;
         set;
     }
+
+    public string SchoolName
+    {
+        get;
+        set;
+    }
+
 
     public List<string> ChosenGladiators
     {
