@@ -17,6 +17,11 @@ public static class ActorGenerator
         LoadAllItemsFiles();
         LoadAllSkillsFiles();
         LoadAllGladiators();
+
+        Debug.LogFormat("Loaded [{0}] Stats Files", ClassStatsMap.Count);
+        Debug.LogFormat("Loaded [{0}] Items Files", ClassItemsMap.Count);
+        Debug.LogFormat("Loaded [{0}] Skills Files", ClassSkillsMap.Count);
+        Debug.LogFormat("Loaded [{0}] Gladiators Schools", SchoolsAndGladiators.Count);
         int ibreak = 0;
     }
 
@@ -107,6 +112,26 @@ public static class ActorGenerator
         ClassDataMap[ActorClass.Yeti] = new ActorClassData(ActorClass.Yeti, "Yeti", "yeti", (ActorClassAttributes.Male | ActorClassAttributes.Beast | ActorClassAttributes.Heavy | ActorClassAttributes.Nordargh));
     }
 
+    public static bool HeroCharacter(ActorClassData acd)
+    {
+        switch(acd.ActorClass)
+        {
+            case ActorClass.Eiji :
+            case ActorClass.Galverg :
+            case ActorClass.Ludo :
+            case ActorClass.Urlan:
+            case ActorClass.Ursula:
+            case ActorClass.UrsulaCostumeA:
+            case ActorClass.UrsulaCostumeB:
+            case ActorClass.Valens:
+            case ActorClass.ValensCostumeA:
+            case ActorClass.ValensCostumeB:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     public static bool CheckLevelUp(CharacterData characterData, int xpGained)
     {
         return false;
@@ -118,21 +143,74 @@ public static class ActorGenerator
         List<ActorClassData> validClasses = new List<ActorClassData>();
         foreach (ActorClassData actorClassData in ClassDataMap.Values)
         {
-            if ((((int)actorClassData.Mask) & characterData.RequiredMask) != 0)
+            if (characterData.RequiredMask == 0 ||(
+                (((int)actorClassData.Mask) & characterData.RequiredMask) != 0))
             {
-                validClasses.Add(actorClassData);
+                // ignore hero characters for now...
+                if(!HeroCharacter(actorClassData))
+                {
+                    validClasses.Add(actorClassData);
+                }
             }
         }
         // pick one at random?
-        int randomChar = UnityEngine.Random.Range(0, validClasses.Count);
+        int randomChar = UnityEngine.Random.Range(0, validClasses.Count-1);
+        if(randomChar < 0 || randomChar >= validClasses.Count)
+        {
+            int ibreak = 0;
+        }
+
         ActorClassData classData = validClasses[randomChar];
         characterData.ActorClass = classData.ActorClass;
 
-        String skillSetName = "";
-        StatsSet coreStat = StatForClassLevel(characterData.ActorClassData.Name, skillSetName, characterData.Level);
-        characterData.CopyModCoreStat(coreStat);
+        // character data can act as an empty slot saying whats allowed , as well as being an actual character slot?
+        String className = characterData.ActorClassData != null ? characterData.ActorClassData.Name : "Unassigned";
+        string statsSetName = characterData.StatsSetName;
+        if (String.IsNullOrEmpty(statsSetName))
+        {
+            StatsSetBlock setBlock = null;
+            if (ClassStatsMap.TryGetValue(characterData.ActorClassData.Name, out setBlock))
+            {
+                int random = UnityEngine.Random.Range(0, setBlock.SubBlockMap.Count-1);
+                statsSetName = setBlock.SubBlockMap.Keys.ToDynList()[random];
+            }
+        }
 
+        if (String.IsNullOrEmpty(statsSetName))
+        {
+            Debug.LogErrorFormat("Unable to find stats for [{0}]", characterData.ActorClassData.Name);
+        }
+        else
+        {
+            characterData.StatsSetName = statsSetName;
 
+            StatsSet statData = StatForClassLevel(className, statsSetName, characterData.Level);
+            if (statData == null)
+            {
+                int ibreak = 0;
+            }
+            characterData.CopyModCoreStat(statData);
+        }
+
+        String skillSetName = characterData.SkillSetName;
+        if (String.IsNullOrEmpty(skillSetName))
+        {
+            SkillSetBlock setBlock = null;
+            if (ClassSkillsMap.TryGetValue(characterData.ActorClassData.Name, out setBlock))
+            {
+                int random = UnityEngine.Random.Range(0, setBlock.SubBlockMap.Count-1);
+                skillSetName = setBlock.SubBlockMap.Keys.ToDynList()[random];
+            }
+        }
+
+        if (String.IsNullOrEmpty(skillSetName))
+        {
+            Debug.LogErrorFormat("Unable to find skill for [{0}]", characterData.ActorClassData.Name);
+        }
+        else
+        {
+            characterData.SkillSetName = skillSetName;
+        }
         return characterData;
 
     }
@@ -152,7 +230,7 @@ public static class ActorGenerator
 
         int val4 = int.Parse(tokens[counter++]);
 
-        int level = -1; // base of player level?u
+        int level = 1; // base of player level?u
 
         if (characterData.MinLevel > 0 && characterData.MaxLevel > 0)
         {
@@ -237,20 +315,6 @@ public static class ActorGenerator
         int val11 = int.Parse(tokens[counter++]);
         int val12 = int.Parse(tokens[counter++]);
 
-        // character data can act as an empty slot saying whats allowed , as well as being an actual character slot?
-        String className = characterData.ActorClassData.Name;
-        string skillSetName = "";
-        StatsSet statData = StatForClassLevel(className, skillSetName, level);
-        if (statData != null)
-        {
-            characterData.CON = statData.CON;
-            characterData.PWR = statData.PWR;
-            characterData.ACC = statData.ACC;
-            characterData.DEF = statData.DEF;
-            characterData.INI = statData.INI;
-            characterData.MOV = statData.MOV;
-        }
-
         return characterData;
     }
 
@@ -263,22 +327,25 @@ public static class ActorGenerator
             try
             {
                 String[] lines = file.text.Split('\n');
-                LoadStatsFile(lines);
+                StatsSetBlock setBlock = LoadStatsFile(lines);
+                ClassStatsMap[setBlock.MainClass] = setBlock;
             }
             catch (Exception e)
             {
-
+                Debug.LogErrorFormat("Exception loading stat files for [{0}][{1}]", file.name, e);
             }
         }
     }
 
 
-    public static void LoadStatsFile(String[] fileData)
+    public static StatsSetBlock LoadStatsFile(String[] fileData)
     {
+        StatsSetBlock setBlock = null;
         if (fileData.Length > 0)
         {
             String className = "unk";
-            StatsSetBlock setBlock = new StatsSetBlock(fileData[0]);
+            setBlock = new StatsSetBlock(fileData[0]);
+
             List<String> shortList = new List<String>();
             char[] splitTokens = new char[] { ' ', ',' };
             for (int i = 1; i < fileData.Length; ++i)
@@ -323,16 +390,17 @@ public static class ActorGenerator
                 }
             }
         }
+        return setBlock;
     }
 
-    public static StatsSet StatForClassLevel(string className, string skillsetName, int level)
+    public static StatsSet StatForClassLevel(string className, string statsSetName, int level)
     {
         StatsSet set = null;
         StatsSetBlock setBlock = null;
         if (ClassStatsMap.TryGetValue(className, out setBlock))
         {
             List<StatsSet> statRow = null;
-            if (setBlock.SubBlockMap.TryGetValue(skillsetName, out statRow))
+            if (setBlock.SubBlockMap.TryGetValue(statsSetName, out statRow))
             {
                 if (level < statRow.Count)
                 {
@@ -511,7 +579,7 @@ NUMUNITS: 2173
             }
             catch (Exception e)
             {
-
+                Debug.LogErrorFormat("Exception loading skill files for [{0}][{1}]", file.name, e);
             }
 
         }
@@ -536,7 +604,7 @@ NUMUNITS: 2173
             {
 
                 string[] lineTokens = GladiusGlobals.SplitAndTidyString(line, new char[] { ',', ':' });
-                if (lineTokens.Length == 9)
+                if (lineTokens.Length == 5)
                 {
                     SkillSetItem skill = new SkillSetItem(lineTokens);
                     currentSetBlock.AddItem(skill);
@@ -568,7 +636,7 @@ public class GladiatorData
     public string itemSetName;
     public string skillSetName;
     public string schoolName;
-    public int level;
+    public int level = 1;
 }
 
 public class ActorClassData
@@ -638,10 +706,14 @@ public class StatsSetBlock
 {
     public StatsSetBlock(String line)
     {
-       string[] lineTokens = GladiusGlobals.SplitAndTidyString(line, new char[] { ' ' }, false);
-        if (lineTokens.Length == 5)
+        if (line.Contains("Samnite"))
         {
-            MainClass = lineTokens[4];
+            int ibreak = 0;
+        }
+       string[] lineTokens = GladiusGlobals.SplitAndTidyString(line, new char[] { ' ' }, false);
+        if (lineTokens.Length == 4)
+        {
+            MainClass = lineTokens[3];
         }
         else
         {
@@ -663,7 +735,7 @@ public class StatsSetBlock
 
     }
 
-    string MainClass;
+    public string MainClass;
     public Dictionary<String, List<StatsSet>> SubBlockMap = new Dictionary<string, List<StatsSet>>();
 
 }
@@ -802,11 +874,16 @@ public class SkillSetBlock
 {
     public SkillSetBlock(String line)
     {
+        if (line.Contains("Samnite"))
+        {
+            int ibreak = 0;
+        }
+
         string[] lineTokens = GladiusGlobals.SplitAndTidyString(line, new char[] { ' ' }, false);
-        if (lineTokens.Length == 9)
+        if (lineTokens.Length == 7)
         {
             MainClass = lineTokens[4];
-            SubClass = lineTokens[5];
+            SubClass = lineTokens[3];
       //      Affinity = lineTokens[7];
         }
         else

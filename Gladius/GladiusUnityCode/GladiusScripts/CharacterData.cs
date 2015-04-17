@@ -314,7 +314,12 @@ using UnityEngine;
         public int MaxLevel
         { get; set; }
 
-        
+        public string SkillSetName
+        { get; set; }
+
+        public string StatsSetName
+        { get; set; }
+
         private Item[] m_items = new Item[(int)ItemLocation.NumItems];
         private String[] m_itemNames = new String[(int)ItemLocation.NumItems];
         private String m_infoString;
