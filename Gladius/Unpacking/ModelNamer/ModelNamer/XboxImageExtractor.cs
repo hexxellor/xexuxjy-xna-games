@@ -66,6 +66,8 @@ namespace ModelNamer
     {
         public int Width = 0;
         public int Height = 0;
+        public int AdjustedWidth = 0;
+        public int AdjustedHeight = 0;
         public int CompressedSize = 0;
         public bool ContainsDefinition;
         public ushort DXTType = 0;
@@ -89,7 +91,7 @@ namespace ModelNamer
         public void ExtractImages(string sourceDirectory, string targetDirectory)
         {
             List<string> fileNames = new List<string>();
-            fileNames.AddRange(Directory.GetFiles(sourceDirectory, "*"));
+            fileNames.AddRange(Directory.GetFiles(sourceDirectory, "*002802*"));
             ExtractImages(fileNames, targetDirectory);
         }
         
@@ -106,9 +108,9 @@ namespace ModelNamer
             List<string> fileNames = new List<string>();
             String sourcePath = @"D:\gladius-extracted-archive\ps2-decompressed\ClassImages\";
             sourcePath = @"C:\tmp\gladius-extracted-archive\gladius-extracted-archive\xbox-decompressed\PTTPFiles";
-            
+            sourcePath = @"d:\gladius-extracted-archive\xbox-decompressed\PTTPFiles";
             fileNames.AddRange(Directory.GetFiles(sourcePath, "**"));
-            String outputDirectory = @"C:\tmp\xbox-texture-output\";
+            String outputDirectory = @"C:\tmp\xbox-texture-output-all\";
             ExtractImages(fileNames, outputDirectory);
             Exit();
         }
@@ -135,10 +137,13 @@ namespace ModelNamer
                 foreach (XboxGladiusImage image in imageList)
                 {
                     imageCount++;
-                    image.CompressedData = binReader.ReadBytes(image.Header.CompressedSize);
-                    int expanded = image.Header.CompressedSize * 3;
-                    int imgSize = image.Header.Width * image.Header.Height;
 
+                    image.Header.AdjustedWidth = (int)Math.Pow(2, ((int)Math.Ceiling(Math.Log(image.Header.Width) / Math.Log(2))));
+                    image.Header.AdjustedHeight = (int)Math.Pow(2, ((int)Math.Ceiling(Math.Log(image.Header.Height) / Math.Log(2))));
+
+                    //image.Header.Width;
+
+                    byte[] toUnpack = binReader.ReadBytes(image.Header.CompressedSize);
 
                     try
                     {
@@ -157,10 +162,7 @@ namespace ModelNamer
                             flag = ManagedSquish.SquishFlags.Dxt5;
                         }
 
-                        byte[] result = ManagedSquish.Squish.DecompressImage(image.CompressedData, image.Header.Width, image.Header.Height, flag);
-
-                        int a1 = result.Length / 4;
-                        int b1 = image.Header.Width * image.Header.Height;
+                        byte[] result = ManagedSquish.Squish.DecompressImage(toUnpack, image.Header.AdjustedWidth, image.Header.AdjustedHeight, flag);
 
                         Microsoft.Xna.Framework.Color[] colorData = new Microsoft.Xna.Framework.Color[result.Length / 4];
                         for (int i = 0; i < result.Length; i += 4)
@@ -172,13 +174,9 @@ namespace ModelNamer
                             //a = 0xff;
                             Microsoft.Xna.Framework.Color c = new Microsoft.Xna.Framework.Color(r, g, b, a);
                             colorData[i / 4] = c;
-                            //result[i + 0] = a;
-                            //result[i + 1] = r;
-                            //result[i + 2] = g;
-                            //result[i + 3] = b;
                         }
 
-                        image.XNATexture = new Texture2D(graphics.GraphicsDevice, image.Header.Width, image.Header.Height, false, SurfaceFormat.Color);
+                        image.XNATexture = new Texture2D(graphics.GraphicsDevice, image.Header.AdjustedWidth, image.Header.AdjustedHeight, false, SurfaceFormat.Color);
                         image.XNATexture.SetData<Microsoft.Xna.Framework.Color>(colorData);
                     }
                     catch (Exception e)
@@ -222,6 +220,9 @@ namespace ModelNamer
                         {
                             List<String> textureNameList = new List<string>();
                             Common.ReadNullSeparatedNames(binReader, Common.nameTag, textureNameList);
+                            Common.ReadNullSeparatedNames(binReader, Common.nmptTag, textureNameList);
+
+                            
                             {
                                 long currentPos = binReader.BaseStream.Position;
 
@@ -233,10 +234,15 @@ namespace ModelNamer
                                 {
                                     if (gi.XNATexture != null)
                                     {
-                                        //using (FileStream fs2 = new FileStream(targetDirectory + gi.ImageName + ".png", FileMode.OpenOrCreate))
                                         {
-                                            //gi.XNATexture.SaveAsPng(fs2, gi.Header.Width, gi.Header.Height);
-                                            TextureToPng(gi.XNATexture, gi.Header.Width, gi.Header.Height, ImageFormat.Png, targetDirectory + gi.ImageName + ".png");
+                                            if (gi.Header.AdjustedWidth != gi.Header.Width || gi.Header.AdjustedHeight != gi.Header.Height)
+                                            {
+                                                TextureToPng(gi.XNATexture, gi.Header.AdjustedWidth, gi.Header.AdjustedHeight, gi.Header.Width, gi.Header.Height, ImageFormat.Png, targetDirectory + gi.ImageName + ".png");
+                                            }
+                                            else
+                                            {
+                                                TextureToPng(gi.XNATexture, gi.Header.Width, gi.Header.Height, ImageFormat.Png, targetDirectory + gi.ImageName + ".png");
+                                            }
                                         }
                                     }
                                     gi.CompressedData = null;
@@ -317,6 +323,43 @@ namespace ModelNamer
                 bitmap.Save(filename, imageFormat);
             }
         }
+
+        public static void TextureToPng(Texture2D texture, int srcWidth, int srcHeight, int dstWidth,int dstHeight,ImageFormat imageFormat, string filename)
+        {
+            using (Bitmap bitmap = new Bitmap(dstWidth, dstHeight, PixelFormat.Format32bppArgb))
+            {
+                byte blue;
+                IntPtr safePtr;
+                BitmapData bitmapData;
+                System.Drawing.Rectangle rect = new System.Drawing.Rectangle(0, 0, dstWidth, dstHeight);
+                byte[] textureData = new byte[4 * srcWidth * srcHeight];
+                int copyLength = 4 * dstWidth * dstHeight;
+
+                texture.GetData<byte>(textureData);
+                
+                for (int i = 0; i < textureData.Length; i += 4)
+                {
+                    blue = textureData[i];
+                    textureData[i] = textureData[i + 2];
+                    textureData[i + 2] = blue;
+                }
+                //texture
+                bitmapData = bitmap.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+                safePtr = bitmapData.Scan0;
+
+                int lineWidth = dstWidth * 4;
+                int srcWidthAdj = srcWidth * 4;
+                for (int i = 0; i < dstHeight; ++i)
+                {
+                    Marshal.Copy(textureData, (i * srcWidthAdj), safePtr, lineWidth);
+                    safePtr += lineWidth;
+                }
+                bitmap.UnlockBits(bitmapData);
+                bitmap.Save(filename, imageFormat);
+            }
+        }
+
+
 
         static int Main(string[] args)
         {
