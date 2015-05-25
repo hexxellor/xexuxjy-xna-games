@@ -35,6 +35,8 @@ namespace ModelNamer
                         }
 
                         XboxModel model = LoadSingleModel(sourceFile.FullName) as XboxModel;
+
+
                         m_models.Add(model);
 
                     }
@@ -67,7 +69,6 @@ namespace ModelNamer
         }
 
 
-
         static void Main(string[] args)
         {
             String rootPath = @"d:\gladius-extracted-archive\xbox-decompressed\";
@@ -86,7 +87,10 @@ namespace ModelNamer
             //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed", "*armor_all*"));
             //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed", "*carafe_decanter*"));
             //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed", "*animalsk*"));
+            filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\characters\", "*PropPracticePost1*"));
             //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\characters\", "*PropPracticePost*"));
+            filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\characters\", "*ogre*"));
+            //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\characters\", "*bear*"));
             //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\characters\", "*amazon*"));
             //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\arenas\", "*thepit*"));
             //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\arenas\", "*caltha*"));
@@ -94,7 +98,7 @@ namespace ModelNamer
             //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\arenas\", "*valenssc*"));
             //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\arenas\", "*nordagh_w*"));
             //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed", "*"));
-            filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\weapons\", "*axe*"));
+            //filenames.AddRange(Directory.GetFiles(rootPath + @"ModelFilesRenamed\weapons\", "*axe*"));
             //filenames.Add(rootPath + @"ModelFilesRenamed\weapons\axeCS_declamatio.mdl");
             //filenames.Add(rootPath + @"ModelFilesRenamed\weapons\swordM_gladius.mdl");
             //filenames.Add(rootPath + @"ModelFilesRenamed\weapons\swordCS_unofan.mdl");
@@ -103,7 +107,7 @@ namespace ModelNamer
             //filenames.Add(rootPath + @"ModelFilesRenamed\armor_all.mdl");
             //filenames.Add(rootPath + @"ModelFilesRenamed\wheel.mdl");
             //filenames.Add(rootPath + @"ModelFilesRenamed\arcane_water_crown.mdl");
-            //filenames.Add(rootPath + @"ModelFilesRenamed\characters\amazon.mdl");
+            //filenames.Add(rootPath + @"ModelFilesRenamed\characters\amazon.mdl")
             //filenames.Add(rootPath + @"ModelFilesRenamed\characters\bear.mdl");
             //filenames.Add(rootPath + @"ModelFilesRenamed\characters\urlancinematic.mdl");
             //filenames.Add(rootPath + @"ModelFilesRenamed\characters\yeti.mdl");
@@ -112,7 +116,7 @@ namespace ModelNamer
             //filenames.Add(rootPath + @"ModelFilesRenamed\carafe_carafe.mdl");
             //filenames.Add(rootPath + @"ModelFilesRenamed\arenas\palaceibliis.mdl");
             //filenames.Add(rootPath + @"ModelFilesRenamed\arenas\darkgod.mdl");
-
+            //filenames.Add(rootPath + @"ModelFilesRenamed\characters\barbarian.mdl");
 
             foreach (string name in filenames)
             {
@@ -164,6 +168,20 @@ namespace ModelNamer
                             infoSW.WriteLine(vbi.DumpWeight());
                         }
                     }
+
+                    List<SubmeshData> result = model.GetIndices(new List<int>());
+
+                    foreach (SubmeshData smi in result)
+                    {
+                        infoSW.WriteLine("Submesh : " + smi.index);
+                        foreach (int i in smi.indices)
+                        {
+                            XboxVertexInstance vbi = model.m_allVertices[i];
+                            infoSW.WriteLine(vbi.DumpWeight());
+                        }
+                        infoSW.WriteLine("**************************************");
+                    }
+
                     int startIndex = 0;
 
                 }
@@ -300,7 +318,40 @@ namespace ModelNamer
             ReadSKELSection(binReader);
             binReader.BaseStream.Position = 0;
             ReadXRNDSection(binReader);
+            LoadAnimationData();
         }
+
+
+        public void LoadAnimationData()
+        {
+            if (m_skinned)
+            {
+                try
+                {
+                    string animFilename = Common.AnimFileForModel(m_name);
+                    if (!String.IsNullOrEmpty(animFilename))
+                    {
+                        AnimationReader animationReader = new AnimationReader();
+
+                        using (BinaryReader binReader = new BinaryReader(new FileStream(animFilename, FileMode.Open)))
+                        {
+                            animationReader.Read(binReader);
+                        }
+
+                        foreach (AnimationData animation in animationReader.animations)
+                        {
+                            AddAnimation(animation);
+                        }
+                    }
+                }
+                catch (System.Exception ex)
+                {
+
+                }
+            }
+        }
+
+
 
         public void ReadSELSSection(BinaryReader binReader)
         {
@@ -490,6 +541,18 @@ namespace ModelNamer
                             vbi.BoneIndices[0] = binReader.ReadInt16();
                             vbi.BoneIndices[1] = binReader.ReadInt16();
                             vbi.BoneIndices[2] = binReader.ReadInt16();
+
+                            DebugBoneWeights(vbi.BoneIndices[0]);
+                            DebugBoneWeights(vbi.BoneIndices[1]);
+                            DebugBoneWeights(vbi.BoneIndices[2]);
+
+                            for (int z = 0; z < vbi.BoneIndices.Length; ++z)
+                            {
+                                if (z == 6)
+                                {
+                                    break;
+                                }
+                            }
                             //vbi.Weights = binReader.ReadBytes(6);
                             //if (vbi.Weights[0] / 3 >= m_bones.Count)
                             //{
@@ -576,6 +639,18 @@ namespace ModelNamer
 
             }
 
+        }
+
+        public void DebugBoneWeights(short index)
+        {
+            XboxVertexInstance.sBoneIndices.Add(index);
+            int count = 0;
+            if(!XboxVertexInstance.sBoneIndicesCount.TryGetValue(index,out count))
+            {
+                XboxVertexInstance.sBoneIndicesCount[index] = count;
+            }
+            count++;
+            XboxVertexInstance.sBoneIndicesCount[index] = count;
         }
 
         public bool IsEnd(BinaryReader binReader)
@@ -721,7 +796,7 @@ namespace ModelNamer
                 if (a != max)
                 {
 
-                    //continue;
+                    //inue;
                 }
 
                 try
@@ -817,12 +892,86 @@ namespace ModelNamer
             }
         }
 
+        public List<SubmeshData> GetIndices(List<int> excludeList)
+        {
+            List<SubmeshData> result = new List<SubmeshData>();
+            bool swap = false;
+            int startIndex = 0;
+            for (int a = 0; a < m_subMeshData2List.Count; ++a)
+            {
+                SubMeshData2 headerBlock = m_subMeshData2List[a];
+                SubMeshData1 data1 = m_subMeshData1List[a];
+                
+                int end = startIndex + headerBlock.NumIndices - 2;
+                if (excludeList.Contains(a))
+                {
+                    startIndex += headerBlock.NumIndices;
+                    continue;
+                }
+
+                SubmeshData smi = new SubmeshData();
+                smi.index = a;
+                smi.subMeshData = data1;
+                smi.indices = new List<int>();
+                //smi.vertices = new List<XboxVertexInstance>();
+                List<int> indexList = smi.indices;
+
+                for (int i = startIndex; i < end; i++)
+                {
+                    int index1 = i;
+                    int index2 = i + 1;
+                    int index3 = i + 2;
+                    if (index3 >= m_allIndices.Count)
+                    {
+                        index3 = index1;
+                    }
+                    if (index2 >= m_allIndices.Count)
+                    {
+                        index2 = index1;
+                    }
+                    if (i >= m_allIndices.Count)
+                    {
+                        int ibreak = 0;
+                    }
+
+                    int i1 = m_allIndices[swap ? index1 : index3];
+                    int i2 = m_allIndices[index2];
+                    int i3 = m_allIndices[swap ? index3 : index1];
+
+                    indexList.Add(i1);
+                    indexList.Add(i2);
+                    indexList.Add(i3);
+
+                    if (!smi.verticesInMesh.Contains(i1))
+                    {
+                        smi.verticesInMesh.Add(i1);
+                    }
+
+                    if (!smi.verticesInMesh.Contains(i2))
+                    {
+                        smi.verticesInMesh.Add(i2);
+                    }
+
+                    if (!smi.verticesInMesh.Contains(i3))
+                    {
+                        smi.verticesInMesh.Add(i3);
+                    }
+
+                    swap = !swap;
+                }
+                smi.verticesInMesh.Sort();
+                result.Add(smi);
+                startIndex += headerBlock.NumIndices;
+            }
+            return result;
+        }
+
 
         public void WriteCollada(StreamWriter writer, StreamWriter materialWriter, String texturePath, bool skinned = false, List<int> excludeList = null)
         {
             writer.WriteLine("<COLLADA xmlns=\"http://www.collada.org/2005/11/COLLADASchema\" version=\"1.4.1\">");
             writer.WriteLine("<asset>");
-            writer.WriteLine("<unit meter=\"0.010000\" name=\"centimeter\"></unit><up_axis>Y_UP</up_axis>");
+            writer.WriteLine("<unit meter=\"1.0\" name=\"meter\"></unit><up_axis>Y_UP</up_axis>");
             writer.WriteLine("</asset>");
 
 
@@ -846,7 +995,7 @@ namespace ModelNamer
                 materialId = texture.textureName;
 
                 writer.WriteLine(String.Format("<image id=\"{0}\" name=\"{1}\">", materialId + "-img", materialId));
-                writer.WriteLine(String.Format("<init_from><ref>{0}</ref></init_from>", texturePath + materialId + ".png"));
+                writer.WriteLine(String.Format("<init_from>file://{0}</init_from>", texturePath + materialId + ".png"));
                 writer.WriteLine("</image>");
             }
 
@@ -854,12 +1003,12 @@ namespace ModelNamer
 
             writer.WriteLine("<library_effects>");
 
-            string meshName = "Mesh1";
-            string positionTag = "_Position";
-            string normalTag = "_Normal";
-            string uvTag = "_UV";
+            //string positionTag = "_Position";
+            //string normalTag = "_Normal";
+            //string uvTag = "_UV";
 
-            string geometryLibId = meshName + "-lib";
+            //string geometryLibId = meshName + "-lib";
+            string firstMesh = "Mesh0";
 
             foreach (TextureData texture in m_textures)
             {
@@ -873,7 +1022,7 @@ namespace ModelNamer
                     line = line.Replace("REPLACEME-TEXTURE", materialId + "-img");
                     line = line.Replace("REPLACEME-SAMPLER", materialId + "-sampler");
                     line = line.Replace("REPLACEME-SURFACE", materialId + "-surface");
-                    line = line.Replace("REPLACEME-UVSET", uvTag);
+                    line = line.Replace("REPLACEME-UVSET", firstMesh+"-map1");
                     writer.Write(line);
                 }
                 writer.WriteLine("</effect>");
@@ -881,74 +1030,339 @@ namespace ModelNamer
 
             writer.WriteLine("</library_effects>");
             writer.WriteLine("<library_geometries>");
-            writer.WriteLine(String.Format("<geometry id=\"{0}\" name=\"{1}\">", geometryLibId, meshName + "-mesh"));
-            writer.WriteLine("<mesh>");
 
+            List<SubmeshData> indexList = GetIndices(excludeList);
 
-            writer.WriteLine(String.Format("<source id=\"{0}\">", meshName + positionTag));
-            writer.WriteLine(String.Format("<float_array id=\"{0}\" count=\"{1}\">", meshName + positionTag + "_Array", m_allVertices.Count * 3));
-            foreach (XboxVertexInstance vpnt in m_allVertices)
+            for (int i = 0; i < indexList.Count; ++i)
             {
-                writer.WriteLine(String.Format("{0:0.00000} {1:0.00000} {2:0.00000}", vpnt.Position.X, vpnt.Position.Y, vpnt.Position.Z));
+                string meshName = "Mesh" + i;
+
+                writer.WriteLine(String.Format("<geometry id=\"{0}\" name=\"{1}\">", meshName, meshName));
+                writer.WriteLine("<mesh>");
+
+                //if (i == 0)
+                {
+
+                    writer.WriteLine(String.Format("<source id=\"{0}-positions\" name=\"position\">", meshName));
+                    writer.WriteLine(String.Format("<float_array id=\"{0}-positions-array\" count=\"{1}\">", meshName, indexList[i].verticesInMesh.Count * 3));
+                    //foreach (XboxVertexInstance vpnt in m_allVertices)
+                    for(int j=0;j<indexList[i].verticesInMesh.Count;++j)
+                    {
+                        XboxVertexInstance vpnt = m_allVertices[indexList[i].verticesInMesh[j]];
+                        writer.WriteLine(String.Format("{0:0.00000} {1:0.00000} {2:0.00000}", vpnt.Position.X, vpnt.Position.Y, vpnt.Position.Z));
+                    }
+                    writer.WriteLine("</float_array>");
+                    WriteCommonTechnique(writer, "#" + meshName + "-positions-array", indexList[i].verticesInMesh.Count, 3);
+
+                    writer.WriteLine("</source>");
+                    writer.WriteLine(String.Format("<source id=\"{0}-normals\">", meshName));
+                    writer.WriteLine(String.Format("<float_array id=\"{0}-normals-array\" count=\"{1}\">", meshName, indexList[i].verticesInMesh.Count * 3));
+                    for (int j = 0; j < indexList[i].verticesInMesh.Count; ++j)
+                    {
+                        XboxVertexInstance vpnt = m_allVertices[indexList[i].verticesInMesh[j]];
+                        writer.WriteLine(String.Format("{0:0.00000} {1:0.00000} {2:0.00000}", vpnt.Normal.X, vpnt.Normal.Y, vpnt.Normal.Z));
+                    }
+                    writer.WriteLine("</float_array>");
+                    WriteCommonTechnique(writer, "#" + meshName + "-normals-array", indexList[i].verticesInMesh.Count, 3);
+                    writer.WriteLine("</source>");
+
+                    writer.WriteLine("<source id=\"{0}-map1\">", meshName);
+                    writer.WriteLine("<float_array id=\"{0}-map1-array\" count=\"{1}\">", meshName, indexList[i].verticesInMesh.Count* 2);
+                    for (int j = 0; j < indexList[i].verticesInMesh.Count; ++j)
+                    {
+                        XboxVertexInstance vpnt = m_allVertices[indexList[i].verticesInMesh[j]];
+                        writer.WriteLine("{0:0.00000} {1:0.00000}", vpnt.UV.X, 1.0f - vpnt.UV.Y);
+                    }
+                    writer.WriteLine("</float_array>");
+                    WriteCommonTechnique(writer, "#" + meshName + "-map1-array", indexList[i].verticesInMesh.Count, 2);
+                    writer.WriteLine("</source>");
+                }
+
+                writer.WriteLine("<vertices id=\"{0}-vertices\">", meshName);
+                writer.WriteLine("<input semantic=\"POSITION\" source=\"#{0}-positions\"/>", meshName);
+                writer.WriteLine("<input semantic=\"NORMAL\" source=\"#{0}-normals\"/>", meshName);
+                writer.WriteLine("<input semantic=\"TEXCOORD\" source=\"#{0}-map1\"/>", meshName);
+                writer.WriteLine("</vertices>");
+
+                //WriteColladaTriStrips(writer, materialId, meshName);
+                int matIndex = 0;
+                int lastMatIndex = 0;
+                int modelCount = 0;
+                int meshTextureId = 0;
+                //List<int> indexList = BuildIndexList2L(false, excludeList);
+
+                //for (int a = 0; a < m_subMeshData2List.Count; ++a)
+                {
+                    try
+                    {
+                        //int adjustedIndex = GetTextureId(indexList[i].index);
+                        int adjustedIndex = TextureForSubmesh(indexList[i].index);
+                        if (adjustedIndex >= m_textureNames.Count)
+                        {
+                            int ibreak = 0;
+                        }
+                        string textureName = m_textureNames[adjustedIndex];
+
+                        WriteColladaTriangles(writer, textureName, meshName, indexList[i]);
+
+                    }
+                    catch (Exception e)
+                    {
+                        int ibreak = 0;
+                    }
+                }
+
+
+                writer.WriteLine("</mesh>");
+
+                writer.WriteLine("</geometry>");
+
+
             }
-            writer.WriteLine("</float_array>");
-            WriteCommonTechnique(writer, "#" + meshName + positionTag + "_Array", m_allVertices.Count, 3);
-
-            writer.WriteLine("</source>");
-            writer.WriteLine(String.Format("<source id=\"{0}\">", meshName + normalTag));
-            writer.WriteLine(String.Format("<float_array id=\"{0}\" count=\"{1}\">", meshName + normalTag + "_Array", m_allVertices.Count * 3));
-            foreach (XboxVertexInstance vpnt in m_allVertices)
-            {
-                writer.WriteLine(String.Format("{0:0.00000} {1:0.00000} {2:0.00000}", vpnt.Normal.X, vpnt.Normal.Y, vpnt.Normal.Z));
-            }
-            writer.WriteLine("</float_array>");
-            WriteCommonTechnique(writer, "#" + meshName + normalTag + "_Array", m_allVertices.Count, 3);
-            writer.WriteLine("</source>");
-
-            writer.WriteLine(String.Format("<source id=\"{0}\">", meshName + uvTag));
-            writer.WriteLine(String.Format("<float_array id=\"{0}\" count=\"{1}\">", meshName + uvTag + "_Array", m_allVertices.Count * 2));
-            foreach (XboxVertexInstance vpnt in m_allVertices)
-            {
-                writer.WriteLine(String.Format("{0:0.00000} {1:0.00000}", vpnt.UV.X, 1.0f - vpnt.UV.Y));
-            }
-            writer.WriteLine("</float_array>");
-            WriteCommonTechnique(writer, "#" + meshName + uvTag + "_Array", m_allVertices.Count, 2);
-            writer.WriteLine("</source>");
-
-            writer.WriteLine(String.Format("<vertices id=\"{0}\">", meshName + "VERTEX"));
-            writer.WriteLine(String.Format("<input semantic=\"POSITION\" source=\"#{0}\"/>", meshName + positionTag));
-            writer.WriteLine(String.Format("<input semantic=\"NORMAL\" source=\"#{0}\"/>", meshName + normalTag));
-            writer.WriteLine(String.Format("<input semantic=\"TEXCOORD\" source=\"#{0}\"/>", meshName + uvTag));
-            writer.WriteLine("</vertices>");
-
-            //WriteColladaTriStrips(writer, materialId, meshName);
-            WriteColladaTriangles(writer, materialId, meshName);
-            writer.WriteLine("</mesh>");
-
-            writer.WriteLine("</geometry>");
             writer.WriteLine("</library_geometries>");
+
+            writer.WriteLine("<library_controllers>");
+            for (int i = 0; i < indexList.Count; ++i)
+            {
+                string meshName = "Mesh" + i;
+
+                writer.WriteLine("<controller id=\"{0}-skin\" name=\"skinCluster1\">", meshName);
+                writer.WriteLine("<skin source=\"#{0}\">", meshName);
+                WriteMatrix(writer, "bind_shape_matrix", "",Matrix.Identity);
+
+
+                WriteJointsAndPoses(writer, m_rootBone, meshName);
+                WriteJointVertexWeight(writer, m_rootBone, meshName, indexList[i]);
+                writer.WriteLine("</skin>");
+                writer.WriteLine("</controller>");
+            }
+
+            writer.WriteLine("</library_controllers>");
+
             writer.WriteLine("<library_visual_scenes>");
-            writer.WriteLine("<visual_scene id=\"\" name=\"\">");
-            writer.WriteLine(String.Format("<node name=\"{0}\" id=\"{1}\" sid=\"{1}\">", meshName, meshName, meshName));
+            writer.WriteLine("<visual_scene id=\"VisualSceneNode\" name=\"bind_sample\">");
+            
+            if (m_skinned)
+            {
+                WriteColladaSkeleton(writer, m_rootBone);
+            }
 
-            writer.WriteLine("<matrix sid=\"matrix\">1.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>");
-            writer.WriteLine("<instance_geometry url=\"#" + geometryLibId + "\">");
+            for (int i = 0; i < indexList.Count; ++i)
+            {
+                string meshName = "Mesh" + i;
+                writer.WriteLine(String.Format("<node name=\"{0}Mesh\" id=\"{1}Mesh\" type=\"NODE\">", meshName, meshName));
 
-            writer.WriteLine("<bind_material>");
-            writer.WriteLine("<technique_common>");
-            writer.WriteLine(String.Format("<instance_material symbol=\"{0}\" target=\"#{1}\"/>", materialId, materialId));
-            writer.WriteLine("</technique_common>");
-            writer.WriteLine("</bind_material>");
-            writer.WriteLine("</instance_geometry>");
-            writer.WriteLine("</node>");
+                //writer.WriteLine("<matrix sid=\"matrix\">1.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>");
+                //WriteMatrix(writer, "matrix", Matrix.Identity);
+                if (m_skinned)
+                {
+
+                    writer.WriteLine("<instance_controller url=\"#" + meshName + "-skin\">");
+                    writer.WriteLine("<skeleton>#{0}</skeleton>", m_rootBone.name);
+                }
+                else
+                {
+                    writer.WriteLine("<instance_geometry url=\"#" + meshName + "\">");
+                }
+
+                writer.WriteLine("<bind_material>");
+                writer.WriteLine("<technique_common>");
+                foreach (string textureId in m_textureNames)
+                {
+                    writer.WriteLine(String.Format("<instance_material symbol=\"{0}\" target=\"#{1}\"/>", textureId, textureId));
+                }
+                writer.WriteLine("</technique_common>");
+                writer.WriteLine("</bind_material>");
+
+                if (m_skinned)
+                {
+                    writer.WriteLine("</instance_controller>");
+                }
+                else
+                {
+                    writer.WriteLine("</instance_geometry>");
+                }
+
+
+                writer.WriteLine("</node>");
+            }
             writer.WriteLine("</visual_scene>");
 
             writer.WriteLine("</library_visual_scenes>");
+            if (m_animationsList.Count > 0)
+            {
+                writer.WriteLine("<library_animations>");
+                foreach (AnimationData animationData in m_animationsList)
+                {
+                    WriteAnimation(writer, animationData);
+                    break;
+                }
+                writer.WriteLine("</library_animations>");
+            }
+
             writer.WriteLine("<scene>");
-            writer.WriteLine("<instance_visual_scene url=\"#\"></instance_visual_scene>");
+            writer.WriteLine("<instance_visual_scene url=\"#VisualSceneNode\"></instance_visual_scene>");
             writer.WriteLine("</scene>");
 
             writer.WriteLine("</COLLADA>");
+        }
+
+        public void WriteMatrix(StreamWriter writer,string name,string sid,Matrix matrix)
+        {
+            if (!String.IsNullOrEmpty(sid))
+            {
+                writer.Write("<{0} sid=\"matrix\"> ", name);
+            }
+            else
+            {
+                writer.Write("<{0}> ", name);
+            }
+            WriteMatrixData(writer, matrix);
+            writer.WriteLine("</{0}>",name);
+        }
+
+        public void WriteMatrixData(StreamWriter writer, Matrix matrix)
+        {
+            //writer.Write("{0:0.0000} {1:0.0000} {2:0.0000} 0.0000 ", matrix.Left.X, matrix.Left.Y, matrix.Left.Z);
+            //writer.Write("{0:0.0000} {1:0.0000} {2:0.0000} 0.0000 ", matrix.Up.X, matrix.Up.Y, matrix.Up.Z);
+            //writer.Write("{0:0.0000} {1:0.0000} {2:0.0000} 0.0000 ", matrix.Forward.X, matrix.Forward.Y, matrix.Forward.Z);
+            //writer.Write("{0:0.0000} {1:0.0000} {2:0.0000} 0.0000 ", matrix.Translation.X, matrix.Translation.Y, matrix.Translation.Z);
+
+            writer.WriteLine("{0:0.0000} {1:0.0000} {2:0.0000} {3:0.0000} ", matrix.Right.X, matrix.Up.X, matrix.Backward.X, matrix.Translation.X);
+            writer.WriteLine("{0:0.0000} {1:0.0000} {2:0.0000} {3:0.0000} ", matrix.Right.Y, matrix.Up.Y, matrix.Backward.Y, matrix.Translation.Y);
+            writer.WriteLine("{0:0.0000} {1:0.0000} {2:0.0000} {3:0.0000} ", matrix.Right.Z, matrix.Up.Z, matrix.Backward.Z, matrix.Translation.Z);
+            writer.WriteLine("{0:0.0000} {1:0.0000} {2:0.0000} {3:0.0000} ", 0.0f, 0.0f, 0.0f, 1.0f);
+
+        }
+
+        public void WriteJointsAndPoses(StreamWriter writer, BoneNode boneNode, String meshId)
+        {
+            writer.WriteLine("<source id=\"{0}-skin-joints\">", meshId);
+            writer.WriteLine("<Name_array id=\"{0}-skin-joints-array\" count=\"{1}\">", meshId, m_bones.Count);
+            foreach (BoneNode node in m_bones)
+            {
+                writer.Write("{0} ", node.name);
+            }
+            writer.WriteLine("</Name_array>");
+            writer.WriteLine("<technique_common>");
+            writer.WriteLine("<accessor source=\"#{0}-skin-joints-array\" count=\"{1}\" stride=\"1\">", meshId, m_bones.Count);
+            writer.WriteLine("<param name=\"JOINT\" type=\"Name\"/>");
+            writer.WriteLine("</accessor>");
+            writer.WriteLine("</technique_common>");
+
+            writer.WriteLine("</source>");
+            writer.WriteLine("<source id=\"{0}-skin-bind_poses\">", meshId);
+            writer.WriteLine("<float_array id=\"{0}-skin-bind_poses-array\" count=\"{1}\">",meshId,m_bones.Count * 16);
+            foreach (BoneNode node in m_bones)
+            {
+                // FIXME - write a converter so that weights are taken from appropriate bone in skeleton?
+                // need to check again correlation between skeleton bone names, and anim ones.
+                // still doesn't explain why i have to swap parts for breastplate and helmet..
+                WriteMatrixData(writer, Matrix.Invert(node.finalMatrix));
+                //WriteMatrixData(writer, node.finalMatrix);
+                //WriteMatrixData(writer, Matrix.Identity);
+                writer.WriteLine();
+            }
+            writer.WriteLine("</float_array>");
+            writer.WriteLine("<technique_common>");
+            writer.WriteLine("<accessor source=\"#{0}-skin-bind_poses-array\" count=\"{1}\" stride=\"16\">", meshId, m_bones.Count);
+            writer.WriteLine("<param name=\"TRANSFORM\" type=\"float4x4\"/>");
+            writer.WriteLine("</accessor>");
+            writer.WriteLine("</technique_common>");
+
+            writer.WriteLine("</source>");
+
+
+        }
+
+
+        public void WriteJointVertexWeight(StreamWriter writer, BoneNode boneNode,String meshId,SubmeshData smd)
+        {
+            //if (first)
+            {
+                writer.WriteLine("<source id=\"{0}-skin-weights\">", meshId);
+                int count = 0;
+                for (int i = 0; i < smd.verticesInMesh.Count; ++i)
+                {
+                    for (int j = 0; j < m_allVertices[smd.verticesInMesh[i]].ActiveWeights(); ++j)
+                    {
+                        count++;
+                    }
+                }
+
+
+                writer.WriteLine("<float_array id=\"{0}-skin-weights-array\" count=\"{1}\">", meshId, count);
+                for (int i = 0; i < smd.verticesInMesh.Count; ++i)
+                {
+                    for (int j = 0; j < m_allVertices[smd.verticesInMesh[i]].ActiveWeights(); ++j)
+                    {
+                           writer.Write("{0:0.0000} ", m_allVertices[smd.verticesInMesh[i]].Weight(j));
+                    }
+                }
+                writer.WriteLine("</float_array>");
+
+                writer.WriteLine("<technique_common>");
+                writer.WriteLine("<accessor source=\"#{0}-skin-weights-array\" count=\"{1}\" stride=\"1\">", meshId, count);
+                writer.WriteLine("<param name=\"WEIGHT\" type=\"float\"/>");
+                writer.WriteLine("</accessor>");
+                writer.WriteLine("</technique_common>");
+                writer.WriteLine("</source>");
+            }
+
+            String referenceMeshId = meshId;// "Mesh0";
+
+            writer.WriteLine("<joints>");
+            writer.WriteLine("<input semantic=\"JOINT\" source=\"#{0}-skin-joints\"/>", referenceMeshId);
+            writer.WriteLine("<input semantic=\"INV_BIND_MATRIX\" source=\"#{0}-skin-bind_poses\"/>", referenceMeshId);
+            writer.WriteLine("</joints>");
+
+            writer.WriteLine("<vertex_weights count=\"{0}\">", smd.verticesInMesh.Count);
+            writer.WriteLine("<input semantic=\"JOINT\" offset=\"0\" source=\"#{0}-skin-joints\"/>", referenceMeshId);
+            writer.WriteLine("<input semantic=\"WEIGHT\" offset=\"1\" source=\"#{0}-skin-weights\"/>", referenceMeshId);
+            writer.WriteLine("<vcount>");
+            // up to ?3 weights per vertex
+            for (int i = 0; i < smd.verticesInMesh.Count; ++i)
+            {
+                writer.Write(m_allVertices[smd.verticesInMesh[i]].ActiveWeights() + " ");
+            }
+
+            writer.WriteLine("</vcount>");
+            writer.WriteLine("<v>");
+            int weightCount = 0;
+            for (int i = 0; i < smd.verticesInMesh.Count; ++i)
+            {
+                for (int j = 0; j < m_allVertices[smd.verticesInMesh[i]].ActiveWeights(); ++j)
+                {
+                    int boneIndex = XboxVertexInstance.AdjustBone(m_allVertices[smd.verticesInMesh[i]].BoneIndices[j]);
+                    //if (meshIndex == 0)
+                    //{
+                    //    if (boneIndex == 2)
+                    //    {
+                    //        boneIndex = 1;
+                    //    }
+                    //    else
+                    //    {
+                    //        boneIndex = 2;
+                    //    }
+                    //}
+                    writer.Write("{0} {1} ", boneIndex, weightCount);
+                    weightCount++;
+                }
+            }
+            writer.WriteLine("</v>");
+            writer.WriteLine("</vertex_weights>");
+
+        }
+
+        public void WriteColladaSkeleton(StreamWriter writer, BoneNode boneNode)
+        {
+            writer.WriteLine("<node id=\"{0}\" name=\"{0}\" sid=\"{0}\" type=\"JOINT\">",boneNode.name);
+            WriteMatrix(writer, "matrix","matrix",boneNode.bindPoseMatrix);
+            foreach (BoneNode child in boneNode.children)
+            {
+                WriteColladaSkeleton(writer, child);
+            }
+            writer.WriteLine("</node>");
         }
 
         public void WriteColladaTriStrips(StreamWriter writer, String materialId, String meshName)
@@ -965,56 +1379,70 @@ namespace ModelNamer
 
         }
 
-        public void WriteColladaTriangles(StreamWriter writer, String materialId, String meshName)
+        public void WriteColladaTriangles(StreamWriter writer, String materialId, String meshName, SubmeshData smi)
         {
-            writer.WriteLine(String.Format("<triangles count=\"{0}\" material=\"{1}\">", m_allIndices.Count, materialId));
-            writer.WriteLine(String.Format("<input semantic=\"VERTEX\" offset=\"0\" source=\"#{0}\"/>", meshName + "VERTEX"));
+            List<int> indices = smi.indices;
+
+            writer.WriteLine(String.Format("<triangles count=\"{0}\" material=\"{1}\">", indices.Count/3, materialId));
+            writer.WriteLine(String.Format("<input semantic=\"VERTEX\" offset=\"0\" source=\"#{0}-vertices\"/>", meshName));
             writer.WriteLine("<p>");
-
-            bool swap = false;
-            int startIndex = 0;
-            int endIndex = m_allIndices.Count - 2;
-            for (int i = startIndex; i < endIndex; i++)
+            int index1 = 0;
+            int index2 = 0;
+            int index3 = 0;
+            int i1 = 0;
+            int i2 = 0;
+            int i3 = 0;
+            try
             {
-                int index1 = i;
-                int index2 = i + 1;
-                int index3 = i + 2;
-                if (index3 >= m_allIndices.Count)
-                {
-                    index3 = index1;
-                }
-                if (index2 >= m_allIndices.Count)
-                {
-                    index2 = index1;
-                }
-                if (i >= m_allIndices.Count)
-                {
-                    int ibreak = 0;
-                }
+                int startIndex = 0;
+                int lowestIndex = Math.Min(indices[0], Math.Min(indices[1], indices[2]));
 
-                int i1 = m_allIndices[index1];
-                int i2 = m_allIndices[index2];
-                int i3 = m_allIndices[index3];
-
-                // 1 based.
-                //i1 += 1;
-                //i2 += 1;
-                //i3 += 1;
-
-                // alternate winding
-                if (swap)
+                //int endIndex = indices.Count - 2;
+                int endIndex = indices.Count;
+                for (int i = startIndex; i < endIndex; i+=3)
                 {
-                    writer.WriteLine(String.Format("{0} {1} {2}", i3, i2, i1));
-                }
-                else
-                {
+                    index1 = i;
+                    index2 = i + 1;
+                    index3 = i + 2;
+                    index1 = Math.Min(index1, m_allIndices.Count - 1);
+                    index2 = Math.Min(index2, m_allIndices.Count - 1);
+                    index3 = Math.Min(index3, m_allIndices.Count - 1);
+
+
+                    i1 = indices[index1];
+                    i2 = indices[index2];
+                    i3 = indices[index3];
+
+                    if (i1 - lowestIndex < 0)
+                    {
+                        int ibreak = 0;
+                    }
+
+                    if (i2 - lowestIndex < 0)
+                    {
+                        int ibreak = 0;
+                    }
+                    if (i3 - lowestIndex < 0)
+                    {
+                        int ibreak = 0;
+                    }
+
+                    i1 -= lowestIndex;
+                    i2 -= lowestIndex;
+                    i3 -= lowestIndex;
+
                     writer.WriteLine(String.Format("{0} {1} {2}", i1, i2, i3));
                 }
-                swap = !swap;
             }
-            writer.WriteLine("</p>");
-            writer.WriteLine("</triangles>");
-
+            catch (Exception e)
+            {
+                int ibreak = 0;
+            }
+            finally
+            {
+                writer.WriteLine("</p>");
+                writer.WriteLine("</triangles>");
+            }
 
         }
 
@@ -1041,6 +1469,113 @@ namespace ModelNamer
         {
 
         }
+
+
+        public void WriteAnimation(StreamWriter writer, AnimationData animation)
+        {
+            writer.WriteLine("<animation name=\"{0}\" id=\"{1}\">",animation.animationName,animation.animationName);
+
+            // ugly way of building all the anim data.
+            foreach (BoneNode bone in m_bones)
+            {
+                bone.ResetFrameValues();
+            }
+
+            m_currentAnimation = animation;
+            
+            while (m_animTime < animation.TrueLength())
+            {
+                UpdateAnimation();
+            }
+
+
+            int numBonesToUse = m_bones.Count;
+            for(int i=0;i<m_bones.Count;++i)
+            {
+                BoneNode bone = m_bones[i];
+                if (i > numBonesToUse)
+                {
+                    continue;
+                }
+                // input timestep
+                writer.WriteLine("<source id=\"{0}-matrix-input\">", bone.name);
+                writer.WriteLine("<float_array id=\"{0}-matrix-input-array\" count=\"{1}\">", bone.name, animation.timeStepList.Count());
+                foreach (float f in animation.timeStepList)
+                {
+                    writer.Write("{0:0.0000} ", f);
+                }
+                writer.WriteLine("</float_array>");
+                writer.WriteLine("<technique_common>");
+                writer.WriteLine(String.Format("<accessor source=\"#{0}-matrix-input-array\" count=\"{1}\" stride=\"{2}\">", bone.name, animation.timeStepList.Count, 1));
+                writer.WriteLine("<param name=\"TIME\" type=\"float\"/>");
+                writer.WriteLine("</accessor>");
+                writer.WriteLine("</technique_common>");
+                writer.WriteLine("</source>");
+
+                writer.WriteLine("<source id=\"{0}-matrix-output\">", bone.name);
+                writer.WriteLine("<float_array id=\"{0}-matrix-output-array\" count=\"{1}\">", bone.name, animation.timeStepList.Count()*16);
+                //foreach (Matrix m in bone.timeMatrices)
+                foreach (Matrix m in bone.timeMatrices)
+                {
+                    //WriteMatrixData(writer, m);
+                    WriteMatrixData(writer, Matrix.Invert(m));
+                }
+
+                writer.WriteLine("</float_array>");
+                writer.WriteLine("<technique_common>");
+                writer.WriteLine(String.Format("<accessor source=\"#{0}-matrix-output-array\" count=\"{1}\" stride=\"{2}\">", bone.name, animation.timeStepList.Count, 16));
+
+                writer.WriteLine("<param name=\"TRANSFORM\" type=\"float4x4\"/>");
+                writer.WriteLine("</accessor>");
+                writer.WriteLine("</technique_common>");
+                writer.WriteLine("</source>");
+
+                writer.WriteLine("<source id=\"{0}-matrix-interpolation\">", bone.name);
+                writer.WriteLine("<Name_array id=\"{0}-matrix-interpolation-array\" count=\"{1}\">", bone.name, animation.timeStepList.Count());
+                foreach (float f in animation.timeStepList)
+                {
+                    writer.Write("LINEAR ");    
+                }
+
+                writer.WriteLine("</Name_array>");
+                writer.WriteLine("<technique_common>");
+                writer.WriteLine(String.Format("<accessor source=\"#{0}-matrix-interpolation-array\" count=\"{1}\" stride=\"{2}\">", bone.name, animation.timeStepList.Count, 1));
+                writer.WriteLine("<param name=\"INTERPOLATION\" type=\"name\"/>");
+                writer.WriteLine("</accessor>");
+                writer.WriteLine("</technique_common>");
+                writer.WriteLine("</source>");
+
+
+            }
+
+            for (int i = 0; i < m_bones.Count; ++i)
+            {
+                BoneNode bone = m_bones[i];
+                if (i > numBonesToUse)
+                {
+                    continue;
+                }
+                writer.WriteLine("<sampler id=\"{0}-matrix-animation-transform\">", bone.name);
+                writer.WriteLine("<input semantic=\"INPUT\" source=\"#{0}-matrix-input\"/>",bone.name);
+                writer.WriteLine("<input semantic=\"OUTPUT\" source=\"#{0}-matrix-output\"/>", bone.name);
+                writer.WriteLine("<input semantic=\"INTERPOLATION\" source=\"#{0}-matrix-interpolation\"/>", bone.name);
+                writer.WriteLine("</sampler>");
+
+            }
+
+            for (int i = 0; i < m_bones.Count; ++i)
+            {
+                BoneNode bone = m_bones[i];
+                if (i > numBonesToUse)
+                {
+                    continue;
+                }
+                writer.WriteLine("<channel source=\"#{0}-matrix-animation-transform\" target=\"{0}/matrix\"/>", bone.name);
+            }            
+            
+            writer.WriteLine("</animation>");
+        }
+
 
 
         public Vector2 CalcUVForWeight(XboxVertexInstance vbi)
@@ -1269,6 +1804,25 @@ namespace ModelNamer
             return v;
         }
 
+        public int TextureForSubmesh(int subMeshId)
+        {
+            if (m_name == "barbarian.mdl")
+            {
+                if (subMeshId == 0)
+                {
+                    return 0;
+                }
+                if (subMeshId == 1)
+                {
+                    return 1;
+                }
+                
+                return 2;
+
+            }
+            return 0;
+        }
+
         public int AdjustForModel(int adjustedIndex)
         {
             if (m_name == "calthaArena")
@@ -1340,6 +1894,10 @@ namespace ModelNamer
                     adjustedIndex++;
                 }
             }
+            else if (m_name == "barbarian.mdl")
+            {
+         
+            }
             return adjustedIndex;
         }
 
@@ -1370,6 +1928,13 @@ namespace ModelNamer
                 {
                     BoneNode node = BoneNode.FromStream(binReader);
                     node.name = m_boneNames[i];
+                    List<string> names;
+                    if (!BoneNode.pad1ByteNames.TryGetValue(node.pad1, out names))
+                    {
+                        names = new List<string>();
+                        BoneNode.pad1ByteNames[node.pad1] = names;
+                    }
+                    names.Add(node.name);
                     m_bones.Add(node);
                 }
                 ConstructSkeleton();
@@ -1820,7 +2385,7 @@ namespace ModelNamer
                     XboxVertexInstance xbi = m_allVertices[i];
                     for (int a = 0; a < 3; ++a)
                     {
-                        short index1 = (short)xbi.AdjustBone(xbi.BoneIndices[a]);
+                        short index1 = (short)XboxVertexInstance.AdjustBone(xbi.BoneIndices[a]);
                         if (index1 != -1)
                         {
                             boneMap[index1].AddIndexAndWeight(i, xbi.Weight(a));
@@ -1886,6 +2451,41 @@ namespace ModelNamer
 
             }
 
+
+        }
+
+        public int GetTextureId(int val)
+        {
+            SubMeshData1 data1 = m_subMeshData1List[val];
+
+
+            int matIndex = 0;
+            if (val < m_meshMaterialList.Count)
+            {
+                val = m_meshMaterialList[val].val3 / s_materialBlockSize;
+            }
+
+            int adjustment = 0;
+            matIndex = Math.Min(matIndex, m_materialDataList.Count);
+
+            for (int i = 0; i < matIndex; ++i)
+            {
+                if (m_materialDataList[i].specularTextureData != null)
+                {
+                    adjustment = 1;
+                }
+            }
+            matIndex -= adjustment;
+
+            //adjustedIndex = materialData.diffuseTextureId / s_textureBlockSize;
+            //adjustedIndex -= adjustment;
+            int adjustedIndex = AdjustForModel(matIndex);
+
+            if (adjustedIndex >= m_textureNames.Count)
+            {
+                adjustedIndex = m_textureNames.Count - 1;
+            }
+            return adjustedIndex;
 
         }
 
@@ -2528,9 +3128,6 @@ namespace ModelNamer
             maxOffset += 1;
             int ibreak2 = 0;
 
-
-
-
             for (int i = 0; i < maxOffset; ++i)
             {
                 smd3.materialBlockList.Add(MaterialBlock.FromStream(binReader));
@@ -2542,7 +3139,7 @@ namespace ModelNamer
             smd3.headerEnd4 = binReader.ReadInt32();
             smd3.headerEnd5 = binReader.ReadInt32();
             smd3.headerEnd6 = binReader.ReadSingle();
-            Debug.Assert(smd3.headerEnd6 == 1.0f || smd3.headerEnd6 == 0.0f);
+            //Debug.Assert(smd3.headerEnd6 == 1.0f || smd3.headerEnd6 == 0.0f);
             for (int i = 0; i < smd3.headerEndZero.Length; ++i)
             {
                 smd3.headerEndZero[i] = binReader.ReadInt32();
@@ -2725,6 +3322,9 @@ namespace ModelNamer
         public int BoneWeights;
         public int BoneInfo3;
 
+        public static HashSet<short> sBoneIndices = new HashSet<short>();
+        public static Dictionary<short,int> sBoneIndicesCount = new Dictionary<short,int>();
+
         public override string ToString()
         {
             return String.Format("P {0}\tN {1}\tUV {2}\tE {3}", Common.ToString(Position), Common.ToString(Normal), Common.ToString(UV), ExtraData);
@@ -2736,14 +3336,27 @@ namespace ModelNamer
             return String.Format("W1 {0:0.0000}\t W2 {1:0.0000}\t W3 {2:0.0000} {3},{4},{5}", Weight(0), Weight(1), Weight(2), AdjustBone(BoneIndices[0]), AdjustBone(BoneIndices[1]), AdjustBone(BoneIndices[2]));
         }
 
-        public int AdjustBone(int index)
+        public static int AdjustBone(int index)
         {
             if (index != -1)
             {
                 Debug.Assert(index % 3 == 0);
                 index /= 3;
             }
-            return index;
+            return index+1;
+        }
+
+        public int ActiveWeights()
+        {
+            int result = 0;
+            for (int i = 0; i < 3; ++i)
+            {
+                if (Weight(i) > 0.0f)
+                {
+                    result++;
+                }
+            }
+            return result;
         }
 
         public float Weight(int index)
@@ -2808,7 +3421,15 @@ namespace ModelNamer
         }
     }
 
+    public class SubmeshData
+    {
+        public int index = 0;
+        public SubMeshData1 subMeshData;
+        public List<int> indices;
+        //public XboxVertexInstance[] vertices;
+        public List<int> verticesInMesh = new List<int>();
 
+    }
 
 }
 
