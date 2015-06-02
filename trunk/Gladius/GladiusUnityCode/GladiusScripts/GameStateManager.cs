@@ -8,6 +8,7 @@ using UnityEngine;
     {
         private GameState m_gameState = GameState.Town;
         private CommonState m_stateData = null;
+        private LoadingScreen m_loadingScreen;
 
         private LocalisationData m_localisationData;
         public LocalisationData LocalisationData
@@ -38,6 +39,11 @@ using UnityEngine;
         public void StartGame()
         {
             Application.targetFrameRate = 30;
+
+            GameObject go = Resources.Load("Prefabs/LoadingScreenPrefab") as GameObject;
+            //dfGUIManager.inAddPrefab
+            dfControl dfc = dfGUIManager.ActiveManagers.FirstOrDefault().AddPrefab(go);
+            m_loadingScreen = dfc.gameObject.GetComponent<LoadingScreen>();
 
             LocalisationData = new LocalisationData();
             LocalisationData.Load();
@@ -88,32 +94,33 @@ using UnityEngine;
                 {
                     case (GameState.Arena):
                         {
-                            Application.LoadLevel("ArenaScene");
+                            //Application.LoadLevel("ArenaScene");
+                            m_loadingScreen.Load("ArenaScene");
                             break;
                         }
                     case(GameState.GameOverLose):
                         {
-                            Application.LoadLevel("GameOverLose");
+                            m_loadingScreen.Load("GameOverLose");
                             break;
                         }
                     case(GameState.GameOverWin):
                         {
-                            Application.LoadLevel("GameOverLose");
+                            m_loadingScreen.Load("GameOverLose");
                             break;
                         }
                     case(GameState.Town):
                         {
-                            Application.LoadLevel("TownScene");
+                            m_loadingScreen.Load("TownScene");
                             break;
                         }
                     case(GameState.OverlandImperia):
                         {
-                            Application.LoadLevel("ImperiaWorldMap");
+                            m_loadingScreen.Load("ImperiaWorldMap");
                             break;
                         }
                     case(GameState.OverlandNordargh):
                         {
-                            Application.LoadLevel("NordarghWorldMap");
+                            m_loadingScreen.Load("NordarghWorldMap");
                             break;
                         }
 

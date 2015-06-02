@@ -8,6 +8,12 @@ public class OverlandCharacterControl : MonoBehaviour
 
     public float MovementSpeed = 2f;
     OverlandGUIController m_overlandGuiController;
+    public float CurrentTime = 0f;
+    public float TimeChangeRate = 0.1f;
+
+    public int LightStartDirection = 100;
+    public int LightEndDirection = 250;
+    public Light WorldLight;
 
     // Use this for initialization
     void Start()
@@ -18,6 +24,11 @@ public class OverlandCharacterControl : MonoBehaviour
         {
             m_overlandGuiController = go.GetComponent<OverlandGUIController>();
         }
+        float lightDirection = Mathf.Lerp(LightStartDirection, LightEndDirection, CurrentTime);
+
+        Quaternion q = Quaternion.AngleAxis(lightDirection, Vector3.up);
+        WorldLight.transform.rotation = q;
+
     }
 
     public void RegisterListeners()
@@ -71,6 +82,8 @@ public class OverlandCharacterControl : MonoBehaviour
 
             Quaternion q = Quaternion.LookRotation(v);
 
+            transform.rotation = q;
+
             v *= vl * MovementSpeed * Time.deltaTime;
 
             v.y = -gravity * Time.deltaTime;
@@ -110,13 +123,49 @@ public class OverlandCharacterControl : MonoBehaviour
     {
         Vector2 leftHandJoystickPosition = dfTouchJoystick.GetJoystickPosition("TouchJoystickLeft");
         Vector3 v3 = new Vector3(leftHandJoystickPosition.x, 0, leftHandJoystickPosition.y);
+        if (v3.magnitude > 0f)
+        {
+            
+            v3 = GladiusGlobals.GameStateManager.CurrentStateData.CameraManager.transform.TransformDirection(v3);
+            v3.y = 0;
+            v3.Normalize();
+        }
         UpdateMovement(v3,true);
 
-
+        UpdateTime();        
 
         if (m_overlandGuiController != null && GladiusGlobals.GameStateManager.OverlandStateCommon.GladiatorSchool != null)
         {
-            m_overlandGuiController.UpdateData(GladiusGlobals.GameStateManager.OverlandStateCommon.GladiatorSchool);
+            m_overlandGuiController.UpdateData(GladiusGlobals.GameStateManager.OverlandStateCommon.GladiatorSchool,CurrentTime);
+        }
+    }
+
+    public void UpdateTime()
+    {
+        CurrentTime += (Time.deltaTime * TimeChangeRate);
+        if (CurrentTime > 1f)
+        {
+            CurrentTime = 0f;
+            if (GladiusGlobals.GameStateManager.OverlandStateCommon.GladiatorSchool != null)
+            {
+                GladiusGlobals.GameStateManager.OverlandStateCommon.GladiatorSchool.Days += 1;
+            }
+        }
+
+        float lightDirection = Mathf.Lerp(LightStartDirection, LightEndDirection, CurrentTime);
+
+        Vector3 v = new Vector3(0, lightDirection, 0);
+        WorldLight.transform.localEulerAngles = v;
+
+    
+    
+    }
+
+    public void OnActionClick(dfControl control, dfMouseEventArgs mouseEvent)
+    {
+        if (m_currentTownData != null)
+        {
+            GladiusGlobals.GameStateManager.SetNewState(GameState.Town, null);
         }
     }
 
